@@ -6,9 +6,9 @@ st.set_page_config(
     layout="wide",
 )
 
-st.sidebar.title("🏠 Home")
-st.sidebar.write("Chọn ứng dụng từ sidebar!")
+st.sidebar.title("Chọn ứng dụng từ sidebar!")
 
 
 st.write(" Ứng dụng: ")
 st.markdown("- **Linear Regression**")
+st.markdown("- **MNIST Classification **")

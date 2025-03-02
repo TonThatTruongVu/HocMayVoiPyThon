@@ -1,0 +1,14 @@
+streamlit
+scikit-learn
+pandas
+matplotlib
+mlflow
+streamlit-drawable-canvas==0.9.3
+pillow
+numpy 
+seaborn
+tensorflow
+opencv-python-headless
+langchain-openai
+dagshub
+plotly

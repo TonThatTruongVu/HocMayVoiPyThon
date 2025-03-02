@@ -1,0 +1,15 @@
+artifact_uri: file:///D:/HocMay_Python/HocMay_PyThon/mlruns/955338189891463235/ac1d81a2e8884c36a8e66a2f5b81ec6a/artifacts
+end_time: 1740935816130
+entry_point_name: ''
+experiment_id: '955338189891463235'
+lifecycle_stage: active
+run_id: ac1d81a2e8884c36a8e66a2f5b81ec6a
+run_name: gentle-zebra-525
+run_uuid: ac1d81a2e8884c36a8e66a2f5b81ec6a
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1740935816119
+status: 3
+tags: []
+user_id: HP

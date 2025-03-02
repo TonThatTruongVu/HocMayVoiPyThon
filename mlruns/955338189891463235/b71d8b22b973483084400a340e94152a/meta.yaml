@@ -1,0 +1,15 @@
+artifact_uri: file:///D:/HocMay_Python/HocMay_PyThon/mlruns/955338189891463235/b71d8b22b973483084400a340e94152a/artifacts
+end_time: 1740936295321
+entry_point_name: ''
+experiment_id: '955338189891463235'
+lifecycle_stage: active
+run_id: b71d8b22b973483084400a340e94152a
+run_name: judicious-cub-873
+run_uuid: b71d8b22b973483084400a340e94152a
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1740936295311
+status: 3
+tags: []
+user_id: HP

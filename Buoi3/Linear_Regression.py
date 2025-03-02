@@ -727,88 +727,105 @@ import pandas as pd
 from datetime import datetime
 
 def show_experiment_selector():
-    st.title("📊 MLflow Experiments - DAGsHub")
-
-    # Hiển thị run_name từ st.session_state
-    if "run_name" in st.session_state:
-        st.write(f"🔹 Tên Run hiện tại: {st.session_state['run_name']}")
-    else:
-        st.warning("⚠ Chưa có run_name được thiết lập trong session_state.")
-
-    # Kết nối với DAGsHub MLflow Tracking
+    # Tiêu đề chính với phong cách hiện đại
+    st.markdown("<h1 style='text-align: center; color: #2E86C1;'> MLflow Experiments </h1>", unsafe_allow_html=True)
     
-    # Lấy danh sách tất cả experiments
-    experiment_name = "Linear_Regression"
-    
-    # Tìm experiment theo tên
-    experiments = mlflow.search_experiments()
-    selected_experiment = next((exp for exp in experiments if exp.name == experiment_name), None)
+    # Sidebar hiển thị thông tin tổng quan
+    with st.sidebar:
+        st.subheader("🔍 Tổng quan Experiment")
+        experiment_name = "Linear_Regression"
+        
+        # Kết nối với DAGsHub MLflow Tracking (giả định đã cấu hình)
+        
+        # Lấy danh sách tất cả experiments
+        experiments = mlflow.search_experiments()
+        selected_experiment = next((exp for exp in experiments if exp.name == experiment_name), None)
 
-    if not selected_experiment:
-        st.error(f"❌ Experiment '{experiment_name}' không tồn tại!")
-        return
+        if not selected_experiment:
+            st.error(f"❌ Không tìm thấy Experiment '{experiment_name}'!", icon="🚫")
+            return
 
-    st.subheader(f"📌 Experiment: {experiment_name}")
-    st.write(f"**Experiment ID:** {selected_experiment.experiment_id}")
-    st.write(f"**Trạng thái:** {'Active' if selected_experiment.lifecycle_stage == 'active' else 'Deleted'}")
-    st.write(f"**Vị trí lưu trữ:** {selected_experiment.artifact_location}")
+        st.markdown(f"**Tên Experiment:** `{experiment_name}`")
+        st.markdown(f"**ID:** `{selected_experiment.experiment_id}`")
+        st.markdown(f"**Trạng thái:** {'🟢 Active' if selected_experiment.lifecycle_stage == 'active' else '🔴 Deleted'}")
+        st.markdown(f"**Artifact Location:** `{selected_experiment.artifact_location}`")
+
+        # Hiển thị run_name từ session_state trong sidebar
+        if "run_name" in st.session_state:
+            st.markdown(f"**Run hiện tại:** `{st.session_state['run_name']}`")
+        else:
+            st.warning("⚠ Chưa có run_name nào được thiết lập.", icon="ℹ️")
+
+    # Phần nội dung chính
+    st.markdown("---")  # Đường phân cách ngang
 
     # Lấy danh sách runs trong experiment
     runs = mlflow.search_runs(experiment_ids=[selected_experiment.experiment_id])
 
     if runs.empty:
-        st.warning("⚠ Không có runs nào trong experiment này.")
+        st.warning("⚠ Không có runs nào trong experiment này!", icon="🚨")
         return
 
-    st.write("### 🏃‍♂️ Các Runs gần đây:")
+    # Danh sách các Runs trong một expander
+    with st.expander("🏃‍♂️ Danh sách Runs", expanded=True):
+        st.write("Chọn một Run để xem chi tiết:")
+        run_info = []
+        for _, run in runs.iterrows():
+            run_id = run["run_id"]
+            run_params = mlflow.get_run(run_id).data.params
+            run_name = run_params.get("run_name", f"Run {run_id[:8]}")
+            run_info.append((run_name, run_id))
 
-    # Lấy danh sách run_name từ params
-    run_info = []
-    for _, run in runs.iterrows():
-        run_id = run["run_id"]
-        run_params = mlflow.get_run(run_id).data.params
-        run_name = run_params.get("run_name", f"Run {run_id[:8]}")  # Nếu không có run_name thì lấy run_id
-        run_info.append((run_name, run_id))
+        # Tạo dictionary để map run_name -> run_id
+        run_name_to_id = dict(run_info)
+        run_names = list(run_name_to_id.keys())
 
-    # Tạo dictionary để map run_name -> run_id
-    run_name_to_id = dict(run_info)
-    run_names = list(run_name_to_id.keys())
+        # Dropdown chọn Run
+        selected_run_name = st.selectbox("🔍 Chọn Run:", run_names, key="run_selector", help="Chọn để xem thông tin chi tiết")
 
-    # Chọn run theo run_name
-    selected_run_name = st.selectbox("🔍 Chọn một run:", run_names)
+    # Hiển thị thông tin chi tiết của Run được chọn
     selected_run_id = run_name_to_id[selected_run_name]
-
-    # Hiển thị thông tin chi tiết của run được chọn
     selected_run = mlflow.get_run(selected_run_id)
 
     if selected_run:
-        st.subheader(f"📌 Thông tin Run: {selected_run_name}")
-        st.write(f"**Run Name:** {selected_run_name}")
-        st.write(f"**Run ID:** {selected_run_id}")
-        st.write(f"**Trạng thái:** {selected_run.info.status}")
-        start_time_ms = selected_run.info.start_time  # Thời gian lưu dưới dạng milliseconds
+        st.markdown(f"<h3 style='color: #28B463;'>📌 Chi tiết Run: {selected_run_name}</h3>", unsafe_allow_html=True)
 
-        # Chuyển sang định dạng ngày giờ dễ đọc
-        if start_time_ms:
-            start_time = datetime.fromtimestamp(start_time_ms / 1000).strftime("%Y-%m-%d %H:%M:%S")
-        else:
-            start_time = "Không có thông tin"
+        # Chia thành 2 cột để hiển thị thông tin
+        col1, col2 = st.columns([1, 2])
 
-        st.write(f"**Thời gian chạy:** {start_time}")
+        with col1:
+            st.write("#### ℹ️ Thông tin cơ bản")
+            st.info(f"**Run Name:** {selected_run_name}")
+            st.info(f"**Run ID:** `{selected_run_id}`")
+            st.info(f"**Trạng thái:** {selected_run.info.status}")
+            start_time_ms = selected_run.info.start_time
+            if start_time_ms:
+                start_time = datetime.fromtimestamp(start_time_ms / 1000).strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                start_time = "Không có thông tin"
+            st.info(f"**Thời gian chạy:** {start_time}")
 
-        # Hiển thị thông số đã log
-        params = selected_run.data.params
-        metrics = selected_run.data.metrics
+        with col2:
+            # Parameters trong một khung có thể cuộn
+            params = selected_run.data.params
+            if params:
+                st.write("#### ⚙️ Parameters")
+                with st.container(height=200):
+                    st.json(params)
 
-        if params:
-            st.write("### ⚙️ Parameters:")
-            st.json(params)
+            # Metrics trong một khung có thể cuộn
+            metrics = selected_run.data.metrics
+            if metrics:
+                st.write("#### 📊 Metrics")
+                with st.container(height=200):
+                    st.json(metrics)
 
-        if metrics:
-            st.write("### 📊 Metrics:")
-            st.json(metrics)
     else:
-        st.warning("⚠ Không tìm thấy thông tin cho run này.")
+        st.warning("⚠ Không tìm thấy thông tin cho Run này!", icon="🚨")
+
+    # Footer
+    st.markdown("---")
+    st.markdown("<p style='text-align: center; color: #888;'>Powered by Streamlit & MLflow</p>", unsafe_allow_html=True)
 
 
           

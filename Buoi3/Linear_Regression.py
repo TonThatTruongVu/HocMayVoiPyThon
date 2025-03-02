@@ -738,7 +738,7 @@ def show_experiment_selector():
     # Kết nối với DAGsHub MLflow Tracking
     
     # Lấy danh sách tất cả experiments
-    experiment_name = "Linear_replication"
+    experiment_name = "Linear_Regression"
     
     # Tìm experiment theo tên
     experiments = mlflow.search_experiments()

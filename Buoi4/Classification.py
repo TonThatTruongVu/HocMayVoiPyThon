@@ -328,7 +328,7 @@ def preprocess_uploaded_image(uploaded_file):
 
 
 def show_experiment_selector():
-    st.title("📊 MLflow Experiments - DAGsHub")
+    st.title(" MLflow Experiments ")
     experiment_name = "Classification"
     experiments = mlflow.search_experiments()
     selected_experiment = next((exp for exp in experiments if exp.name == experiment_name), None)
@@ -361,10 +361,10 @@ def show_experiment_selector():
         st.write(f"**Thời gian chạy:** {start_time}")
 
         if selected_run.data.params:
-            st.write("### ⚙️ Parameters:")
+            st.write("###  Parameters:")
             st.json(selected_run.data.params)
         if selected_run.data.metrics:
-            st.write("### 📊 Metrics:")
+            st.write("###  Metrics:")
             st.json(selected_run.data.metrics)
 
 
@@ -379,7 +379,7 @@ def main():
         st.session_state.mlflow_url = "https://dagshub.com/TonThatTruongVu/MNIST-Classification.mlflow"
         st.session_state.mlflow_initialized = True
 
-    tabs = st.tabs(["📘 Data", "📌 Chia dữ liệu", "⚙️ Huấn luyện", "🔢 Dự đoán"])
+    tabs = st.tabs([" Data", " Chia dữ liệu", " Huấn luyện", " Dự đoán"])
     
     with tabs[0]:
         data()

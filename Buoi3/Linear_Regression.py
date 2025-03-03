@@ -640,7 +640,7 @@ def test():
 
     # Tạo các trường nhập liệu cho từng cột
     X_train_input = []
-    binary_columns = [] 
+   
     # Kiểm tra nếu có dữ liệu mapping_dicts trong session_state
     if "mapping_dicts" not in st.session_state:
         st.session_state.mapping_dicts = []
@@ -651,16 +651,17 @@ def test():
         mapping_dict = None
         for column_info in st.session_state.mapping_dicts:
             if column_info["column_name"] == column_name:
+       
                 mapping_dict = column_info["mapping_dict"]
-           
+     
                 break
 
         if mapping_dict:  # Nếu có mapping_dict, hiển thị dropdown với các giá trị thay thế
-         
+       
             value = st.selectbox(f"Giá trị cột {column_name}", options=list(mapping_dict.keys()), key=f"column_{i}")
-         
+    
             value = int(mapping_dict[value])
-        
+       
         else:  # Nếu không có mapping_dict, yêu cầu người dùng nhập số
             value = st.number_input(f"Giá trị cột {column_name}", key=f"column_{i}")
             
@@ -674,31 +675,32 @@ def test():
     scaler = StandardScaler()
   
     for i in range(X_train_input.shape[1]):
-  
-        if X_train_input[0, i] != 0 and X_train_input[0, i] != 1:  # Nếu giá trị không phải 0 hoặc 1   
+        if X_train_input[0, i] != 0 and X_train_input[0, i] != 1:  # Nếu giá trị không phải 0 hoặc 1
             X_train_input_final[0, i] = scaler.fit_transform(X_train_input[:, i].reshape(-1, 1)).flatten()
     
-    
-
+   
     st.write("Dữ liệu sau khi xử lý:", X_train_input_final)
 
     if st.button("Dự đoán"):
         # Thêm cột 1 cho intercept (nếu cần)
         X_input_b = np.c_[np.ones((X_train_input_final.shape[0], 1)), X_train_input_final]
         
-      
+     
         # Dự đoán với mô hình đã lưu
-       
+     
         y_pred = X_input_b.dot(model)  # Dự đoán với mô hình đã lưu
-
+        
+        # Chuyển y_pred thành xác suất bằng sigmoid (vì đây là phân loại nhị phân)
+        y_pred_prob = 1 / (1 + np.exp(-y_pred))  # Áp dụng sigmoid để có giá trị [0, 1]
+        y_pred_scalar = y_pred_prob[0, 0]  # Lấy giá trị đơn từ mảng 2D
 
         # Xác định nhãn dự đoán và độ tin cậy
-        if y_pred >= 0.5:
+        if y_pred_scalar >= 0.5:
             prediction = "SỐNG"
-            confidence = y_pred[0] * 100  # Độ tin cậy là xác suất dự đoán (%), giả sử y_pred là giá trị [0, 1]
+            confidence = y_pred_scalar * 100  # Độ tin cậy là xác suất dự đoán (%)
         else:
             prediction = "CHẾT"
-            confidence = (1 - y_pred[0]) * 100  # Độ tin cậy là 1 - xác suất dự đoán (%)
+            confidence = (1 - y_pred_scalar) * 100  # Độ tin cậy là 1 - xác suất dự đoán (%)
 
         # Hiển thị kết quả dự đoán và độ tin cậy
         st.write(f"**Kết quả dự đoán:** {prediction}")
@@ -707,10 +709,7 @@ def test():
         # Gọi hàm hiển thị thông tin experiment (nếu có)
         show_experiment_selector()
 
-def show_experiment_selector():
-    # Giả định hàm này đã được định nghĩa trong code của bạn
-    st.write("Chọn experiment để xem chi tiết (giả định hàm này đã có sẵn).")
-            
+
 
 def data():
     uploaded_file = st.file_uploader("📂 Chọn file dữ liệu (.csv hoặc .txt)", type=["csv", "txt"])

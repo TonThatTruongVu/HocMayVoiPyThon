@@ -285,8 +285,10 @@ def chuyen_doi_kieu_du_lieu(df):
 
 
 
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+
 def chuan_hoa_du_lieu(df):
-    # st.subheader("📊 Chuẩn hóa dữ liệu với StandardScaler")
+    st.subheader("📊 Chuẩn hóa dữ liệu")
 
     # Lọc tất cả các cột số
     numerical_cols = df.select_dtypes(include=['number']).columns.tolist()
@@ -301,14 +303,27 @@ def chuan_hoa_du_lieu(df):
         st.success("✅ Không có thuộc tính dạng số cần chuẩn hóa!")
         return df
 
+    # Tách cột 'Age' để xử lý riêng (nếu có)
+    age_col = 'Age' if 'Age' in cols_to_scale else None
+    other_cols_to_scale = [col for col in cols_to_scale if col != 'Age']
+
     if st.button("🚀 Thực hiện Chuẩn hóa"):
-        scaler = StandardScaler()
-        df[cols_to_scale] = scaler.fit_transform(df[cols_to_scale])
+        # Chuẩn hóa các cột khác (ngoại trừ Age) bằng StandardScaler
+        if other_cols_to_scale:
+            scaler = StandardScaler()
+            df[other_cols_to_scale] = scaler.fit_transform(df[other_cols_to_scale])
+            st.success(f"✅ Đã chuẩn hóa các cột số bằng StandardScaler: {', '.join(other_cols_to_scale)}")
+
+        # Chuẩn hóa riêng cột Age bằng MinMaxScaler
+        if age_col:
+            minmax_scaler = MinMaxScaler()
+            df[age_col] = minmax_scaler.fit_transform(df[[age_col]])  # Dùng [[age_col]] để giữ dạng DataFrame
+            st.success(f"✅ Đã chuẩn hóa cột 'Age' bằng MinMaxScaler (giá trị trong [0, 1])")
 
         # Lưu vào session_state
         st.session_state.df = df
 
-        st.success(f"✅ Đã chuẩn hóa các cột số (loại bỏ cột nhị phân): {', '.join(cols_to_scale)}")
+
         st.info(f"🚫 Giữ nguyên các cột nhị phân: {', '.join(binary_cols) if binary_cols else 'Không có'}")
         st.dataframe(df.head())
 
@@ -512,22 +527,16 @@ def chon_mo_hinh():
     
     mlflow_input()
     import random
-    # Tạo một số ngẫu nhiên và ghép với "Linear_"
-    random_suffix = random.randint(100, 9999)  # Tạo số ngẫu nhiên từ 100 đến 9999
+    random_suffix = random.randint(100, 9999)
     run_name = f"Linear_{random_suffix}"
-
-    # Sử dụng giá trị mặc định ngẫu nhiên trong text_input
-    #run_name = st.text_input("🔹 Tên Run:", run_name)
-    st.session_state["run_name"] = run_name if run_name else run_name
-    # Lưu vào session_state để không bị mất khi cập nhật UI
-    #run_name = st.text_input("🔹 Nhập tên Run:", "Default_Run")  # Tên run cho MLflow
-    #st.session_state["run_name"] = run_name if run_name else "default_run"
+    st.session_state["run_name"] = run_name
     
     if st.button("Huấn luyện mô hình"):
-        # 🎯 **Tích hợp MLflow**
-        
+        with mlflow.start_run(run_name=f"Train_{st.session_state['run_name']}") as run:
+            # Debug: Kiểm tra run_name đã được gán đúng chưa
+            st.write(f"Debug: Run Name trong MLflow: {run.info.run_name}")
 
-        with mlflow.start_run(run_name=f"Train_{st.session_state['run_name']}"):
+            # Log các thông tin cơ bản
             df = st.session_state.df
             mlflow.log_param("dataset_shape", df.shape)
             mlflow.log_param("target_column", st.session_state.y.name)
@@ -535,74 +544,101 @@ def chon_mo_hinh():
             mlflow.log_param("validation_size", st.session_state.X_val_shape)
             mlflow.log_param("train_size", st.session_state.X_train_shape)
 
-            # Lưu dataset tạm thời
+
             dataset_path = "dataset.csv"
             df.to_csv(dataset_path, index=False)
-
-            # Log dataset lên MLflow
+  
             mlflow.log_artifact(dataset_path)
 
-
+ 
             mlflow.log_param("model_type", model_type)
             mlflow.log_param("n_folds", n_folds)
             mlflow.log_param("learning_rate", learning_rate)
             if model_type == "polynomial":
                 mlflow.log_param("degree", degree)
 
-            for fold, (train_idx, valid_idx) in enumerate(kf.split(X_train, y_train)):
-                X_train_fold, X_valid = X_train.iloc[train_idx], X_train.iloc[valid_idx]
-                y_train_fold, y_valid = y_train.iloc[train_idx], y_train.iloc[valid_idx]
+            try:
+                # Kiểm tra kiểu dữ liệu của X_train và y_train trước khi huấn luyện
+                if not np.issubdtype(X_train.to_numpy().dtype, np.number):
+                    raise ValueError("X_train chứa kiểu dữ liệu không phải số (non-numeric)! Vui lòng chuyển đổi tất cả cột thành số.")
+                if not np.issubdtype(y_train.to_numpy().dtype, np.number):
+                    raise ValueError("y_train chứa kiểu dữ liệu không phải số (non-numeric)! Vui lòng chuyển đổi thành số.")
 
+                # Huấn luyện mô hình với KFold Cross-Validation
+                for fold, (train_idx, valid_idx) in enumerate(kf.split(X_train, y_train)):
+                    X_train_fold, X_valid = X_train.iloc[train_idx], X_train.iloc[valid_idx]
+                    y_train_fold, y_valid = y_train.iloc[train_idx], y_train.iloc[valid_idx]
+
+                    if model_type == "linear":
+                        w = train_multiple_linear_regression(X_train_fold, y_train_fold, learning_rate=learning_rate)
+                        w = np.array(w).reshape(-1, 1)
+                        X_valid_b = np.c_[np.ones((len(X_valid), 1)), X_valid.to_numpy()]
+                        y_valid_pred = X_valid_b.dot(w)
+                    else:  
+                        X_train_fold = scaler.fit_transform(X_train_fold)
+                        w = train_polynomial_regression(X_train_fold, y_train_fold, degree, learning_rate=learning_rate)
+                        w = np.array(w).reshape(-1, 1)
+                        X_valid_scaled = scaler.transform(X_valid.to_numpy())
+                        X_valid_poly = np.hstack([X_valid_scaled] + [X_valid_scaled**d for d in range(2, degree + 1)])
+                        X_valid_b = np.c_[np.ones((len(X_valid_poly), 1)), X_valid_poly]
+                        y_valid_pred = X_valid_b.dot(w)
+
+                    mse = mean_squared_error(y_valid, y_valid_pred)
+                    fold_mse.append(mse)
+                    mlflow.log_metric(f"mse_fold_{fold+1}", mse)
+                    print(f"📌 Fold {fold + 1} - MSE: {mse:.4f}")
+
+                avg_mse = np.mean(fold_mse)
+
+                # Huấn luyện mô hình cuối cùng trên toàn bộ tập train
                 if model_type == "linear":
-                    w = train_multiple_linear_regression(X_train_fold, y_train_fold, learning_rate=learning_rate)
-                    w = np.array(w).reshape(-1, 1)
-                    X_valid_b = np.c_[np.ones((len(X_valid), 1)), X_valid.to_numpy()]
-                    y_valid_pred = X_valid_b.dot(w)
-                else:  
-                    X_train_fold = scaler.fit_transform(X_train_fold)
-                    w = train_polynomial_regression(X_train_fold, y_train_fold, degree, learning_rate=learning_rate)
-                    w = np.array(w).reshape(-1, 1)
-                    X_valid_scaled = scaler.transform(X_valid.to_numpy())
-                    X_valid_poly = np.hstack([X_valid_scaled] + [X_valid_scaled**d for d in range(2, degree + 1)])
-                    X_valid_b = np.c_[np.ones((len(X_valid_poly), 1)), X_valid_poly]
-                    y_valid_pred = X_valid_b.dot(w)
+                    final_w = train_multiple_linear_regression(X_train, y_train, learning_rate=learning_rate)
+                    st.session_state['linear_model'] = final_w
+                    X_test_b = np.c_[np.ones((len(X_test), 1)), X_test.to_numpy()]
+                    y_test_pred = X_test_b.dot(final_w)
+                else:
+                    X_train_scaled = scaler.fit_transform(X_train)
+                    final_w = train_polynomial_regression(X_train_scaled, y_train, degree, learning_rate=learning_rate)
+                    st.session_state['polynomial_model'] = final_w
+                    X_test_scaled = scaler.transform(X_test.to_numpy())
+                    X_test_poly = np.hstack([X_test_scaled] + [X_test_scaled**d for d in range(2, degree + 1)])
+                    X_test_b = np.c_[np.ones((len(X_test_poly), 1)), X_test_poly]
+                    y_test_pred = X_test_b.dot(final_w)
 
-                mse = mean_squared_error(y_valid, y_valid_pred)
-                fold_mse.append(mse)
-                mlflow.log_metric(f"mse_fold_{fold+1}", mse)
-                print(f"📌 Fold {fold + 1} - MSE: {mse:.4f}")
+                test_mse = mean_squared_error(y_test, y_test_pred)
 
-            avg_mse = np.mean(fold_mse)
+                # Log metrics khi thành công
+                mlflow.log_metric("avg_mse", avg_mse)
+                mlflow.log_metric("test_mse", test_mse)
 
-            if model_type == "linear":
-                final_w = train_multiple_linear_regression(X_train, y_train, learning_rate=learning_rate)
-                st.session_state['linear_model'] = final_w
-                X_test_b = np.c_[np.ones((len(X_test), 1)), X_test.to_numpy()]
-                y_test_pred = X_test_b.dot(final_w)
-            else:
-                X_train_scaled = scaler.fit_transform(X_train)
-                final_w = train_polynomial_regression(X_train_scaled, y_train, degree, learning_rate=learning_rate)
-                st.session_state['polynomial_model'] = final_w
-                X_test_scaled = scaler.transform(X_test.to_numpy())
-                X_test_poly = np.hstack([X_test_scaled] + [X_test_scaled**d for d in range(2, degree + 1)])
-                X_test_b = np.c_[np.ones((len(X_test_poly), 1)), X_test_poly]
-                y_test_pred = X_test_b.dot(final_w)
+                st.success(f"MSE trung bình qua các folds: {avg_mse:.4f}")
+                st.success(f"MSE trên tập test: {test_mse:.4f}")
+                st.success(f"✅ Đã log dữ liệu cho **Train_{st.session_state['run_name']}**!")
+                st.markdown(f"### 🔗 [Truy cập MLflow DAGsHub]({st.session_state['mlflow_url']})")
 
-            test_mse = mean_squared_error(y_test, y_test_pred)
+                return final_w, avg_mse, scaler
 
-            # 📌 **Log các giá trị vào MLflow**
-            mlflow.log_metric("avg_mse", avg_mse)
-            mlflow.log_metric("test_mse", test_mse)
+            except Exception as e:
+                error_message = str(e)
+                if "ufunc 'isnan' not supported" in error_message:
+                    error_message = (
+                        "Lỗi: Dữ liệu đầu vào (X_train hoặc y_train) chứa kiểu dữ liệu không phải số (non-numeric) "
+                        "hoặc không thể ép kiểu thành số. Vui lòng kiểm tra và chuyển đổi tất cả cột dữ liệu thành kiểu số "
+                        "(numeric) trước khi huấn luyện (ví dụ: xử lý cột categorical chưa được mã hóa đúng cách)."
+                    )
+                else:
+                    error_message = f"Lỗi không xác định: {str(e)}"
 
-            # Kết thúc run
-            mlflow.end_run()
-            
-            st.success(f"MSE trung bình qua các folds: {avg_mse:.4f}")
-            st.success(f"MSE trên tập test: {test_mse:.4f}")
-            st.success(f"✅ Đã log dữ liệu cho **Train_{st.session_state['run_name']}**!")
-            st.markdown(f"### 🔗 [Truy cập MLflow DAGsHub]({st.session_state['mlflow_url']})")
+                mlflow.log_param("status", "failed")
+                mlflow.log_metric("avg_mse", -1)
+                mlflow.log_metric("test_mse", -1)
+                mlflow.log_param("error_message", error_message)
 
-        return final_w, avg_mse, scaler
+                st.error(f"❌ Lỗi khi huấn luyện mô hình: {error_message}")
+                st.warning(f"⚠️ Dữ liệu lỗi đã được log vào MLflow với run name: **Train_{st.session_state['run_name']}**")
+                st.markdown(f"### 🔗 [Truy cập MLflow DAGsHub]({st.session_state['mlflow_url']})")
+
+                return None, None, None
 
     return None, None, None
 
@@ -734,17 +770,15 @@ import pandas as pd
 from datetime import datetime
 
 def show_experiment_selector():
-    # Tiêu đề chính với phong cách hiện đại
+      
     st.markdown("<h1 style='text-align: center; color: #2E86C1;'> MLflow Experiments </h1>", unsafe_allow_html=True)
     
-    # Sidebar hiển thị thông tin tổng quan
+ 
     with st.sidebar:
         st.subheader("🔍 Tổng quan Experiment")
         experiment_name = "Linear_Regression"
         
-        # Kết nối với DAGsHub MLflow Tracking (giả định đã cấu hình)
-        
-        # Lấy danh sách tất cả experiments
+    
         experiments = mlflow.search_experiments()
         selected_experiment = next((exp for exp in experiments if exp.name == experiment_name), None)
 
@@ -757,47 +791,54 @@ def show_experiment_selector():
         st.markdown(f"**Trạng thái:** {'🟢 Active' if selected_experiment.lifecycle_stage == 'active' else '🔴 Deleted'}")
         st.markdown(f"**Artifact Location:** `{selected_experiment.artifact_location}`")
 
-        # Hiển thị run_name từ session_state trong sidebar
+
         if "run_name" in st.session_state:
             st.markdown(f"**Run hiện tại:** `{st.session_state['run_name']}`")
         else:
             st.warning("⚠ Chưa có run_name nào được thiết lập.", icon="ℹ️")
 
-    # Phần nội dung chính
-    st.markdown("---")  # Đường phân cách ngang
-
-    # Lấy danh sách runs trong experiment
+    st.markdown("---")
     runs = mlflow.search_runs(experiment_ids=[selected_experiment.experiment_id])
 
     if runs.empty:
         st.warning("⚠ Không có runs nào trong experiment này!", icon="🚨")
         return
 
-    # Danh sách các Runs trong một expander
+   
     with st.expander("🏃‍♂️ Danh sách Runs", expanded=True):
         st.write("Chọn một Run để xem chi tiết:")
         run_info = []
+        used_names = set()
+
         for _, run in runs.iterrows():
             run_id = run["run_id"]
-            run_params = mlflow.get_run(run_id).data.params
-            run_name = run_params.get("run_name", f"Run {run_id[:8]}")
+            run_data = mlflow.get_run(run_id)
+            # Lấy run_name từ run.info.run_name
+            run_name = run_data.info.run_name if run_data.info.run_name else f"Run_{run_id[:8]}"
+            
+            run_name_base = run_name
+            counter = 1
+            while run_name in used_names:
+                run_name = f"{run_name_base}_{counter}"
+                counter += 1
+            used_names.add(run_name)
             run_info.append((run_name, run_id))
 
-        # Tạo dictionary để map run_name -> run_id
+
         run_name_to_id = dict(run_info)
         run_names = list(run_name_to_id.keys())
 
-        # Dropdown chọn Run
+
         selected_run_name = st.selectbox("🔍 Chọn Run:", run_names, key="run_selector", help="Chọn để xem thông tin chi tiết")
 
-    # Hiển thị thông tin chi tiết của Run được chọn
+ 
     selected_run_id = run_name_to_id[selected_run_name]
     selected_run = mlflow.get_run(selected_run_id)
 
     if selected_run:
         st.markdown(f"<h3 style='color: #28B463;'>📌 Chi tiết Run: {selected_run_name}</h3>", unsafe_allow_html=True)
 
-        # Chia thành 2 cột để hiển thị thông tin
+
         col1, col2 = st.columns([1, 2])
 
         with col1:
@@ -813,14 +854,14 @@ def show_experiment_selector():
             st.info(f"**Thời gian chạy:** {start_time}")
 
         with col2:
-            # Parameters trong một khung có thể cuộn
+  
             params = selected_run.data.params
             if params:
                 st.write("#### ⚙️ Parameters")
                 with st.container(height=200):
                     st.json(params)
 
-            # Metrics trong một khung có thể cuộn
+
             metrics = selected_run.data.metrics
             if metrics:
                 st.write("#### 📊 Metrics")
@@ -830,12 +871,12 @@ def show_experiment_selector():
     else:
         st.warning("⚠ Không tìm thấy thông tin cho Run này!", icon="🚨")
 
-    # Footer
+
     st.markdown("---")
     st.markdown("<p style='text-align: center; color: #888;'>Powered by Streamlit & MLflow</p>", unsafe_allow_html=True)
 
 
-          
+
 def chon():
     try:
                 

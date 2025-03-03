@@ -146,6 +146,9 @@ def train_evaluate():
             X_train_pca = pca.fit_transform(X_train)
             X_test_pca = pca.transform(X_test)
 
+            # Lưu PCA vào session_state để dùng trong demo
+            st.session_state["pca"] = pca
+
             # Huấn luyện mô hình
             model.fit(X_train_pca)
             labels_train = model.labels_ if model_choice == "K-Means" else model.fit_predict(X_train_pca)
@@ -253,9 +256,9 @@ def preprocess_canvas_image(canvas_result):
             img_gray = img.convert("L")
             # Resize về 28x28
             img_resized = img_gray.resize((28, 28), Image.Resampling.LANCZOS)
-            # Chuyển thành mảng NumPy và chuẩn hóa về [0, 1]
+            # Chuẩn hóa về [0, 1]
             img_normalized = np.array(img_resized) / 255.0
-            return img_normalized.reshape(1, -1)  # Reshape thành (1, 784)
+            return img_normalized.reshape(1, -1)  # Trả về (1, 784)
         except Exception as e:
             st.error(f"⚠️ Lỗi khi xử lý ảnh từ canvas: {str(e)}")
             return None
@@ -272,26 +275,31 @@ def preprocess_uploaded_image(uploaded_file):
             img = Image.open(uploaded_file).convert("L")  # Chuyển sang grayscale
             # Resize về 28x28
             img_resized = img.resize((28, 28), Image.Resampling.LANCZOS)
-            # Chuyển thành mảng NumPy và chuẩn hóa về [0, 1]
+            # Chuẩn hóa về [0, 1]
             img_normalized = np.array(img_resized) / 255.0
-            return img_normalized.reshape(1, -1)  # Reshape thành (1, 784)
+            return img_normalized.reshape(1, -1)  # Trả về (1, 784)
         except Exception as e:
             st.error(f"⚠️ Lỗi khi xử lý ảnh tải lên: {str(e)}")
             return None
     return None
+
 def demo():
     st.header("✍️ Vẽ số hoặc tải ảnh để dự đoán cụm")
-
-    # Kiểm tra xem có mô hình nào đã huấn luyện chưa
+    
     if "models" not in st.session_state or not st.session_state["models"]:
-        st.error("⚠️ Mô hình chưa được huấn luyện! Vui lòng huấn luyện mô hình trong tab 'Huấn luyện & Đánh giá' trước.")
+        st.error("⚠️ Chưa có mô hình nào được huấn luyện! Vui lòng huấn luyện mô hình trong tab 'Huấn luyện' trước.")
         return
 
-    # Dropdown chọn mô hình đã huấn luyện từ st.session_state["models"]
-    st.subheader("🔍 Chọn mô hình đã huấn luyện")
+    # Chọn mô hình từ danh sách đã huấn luyện
     model_names = [model["name"] for model in st.session_state["models"]]
-    model_option = st.selectbox("Chọn mô hình:", model_names)
+    model_option = st.selectbox("🔍 Chọn mô hình đã huấn luyện:", model_names)
     model = next(model["model"] for model in st.session_state["models"] if model["name"] == model_option)
+
+    # Lấy PCA từ session_state
+    if "pca" not in st.session_state:
+        st.error("⚠️ PCA chưa được khởi tạo! Vui lòng huấn luyện mô hình trước.")
+        return
+    pca = st.session_state["pca"]
 
     # Chọn phương thức nhập liệu
     input_method = st.selectbox("📌 Chọn phương thức nhập:", ["Vẽ số", "Tải ảnh"])
@@ -330,18 +338,19 @@ def demo():
                 width=100
             )
 
-            # Dự đoán cụm trên dữ liệu gốc 784 chiều
+            # Giảm chiều dữ liệu đầu vào từ 784 xuống 2 bằng PCA đã fit
+            input_data_pca = pca.transform(input_data)
+
+            # Dự đoán cụm
             if isinstance(model, KMeans):
-                cluster = model.predict(input_data)[0]
+                cluster = model.predict(input_data_pca)[0]
                 st.subheader(f"🔢 Cụm dự đoán: {cluster}")
             elif isinstance(model, DBSCAN):
-                cluster = model.fit_predict(input_data)[0]
+                cluster = model.fit_predict(input_data_pca)[0]
                 st.subheader(f"🔢 Cụm dự đoán: {cluster if cluster != -1 else 'Nhiễu (không thuộc cụm)'}")
-            show_experiment_selector()
-
+            
         else:
-            st.error(f"⚠️ Hãy {'vẽ một số' if input_method == 'Vẽ số' else 'tải ảnh'} trước khi dự đoán!")
-
+          st.error(f"⚠️ Hãy {'vẽ một số' if input_method == 'Vẽ số' else 'tải ảnh'} trước khi dự đoán!")
 def show_experiment_selector():
     st.title(" MLflow Experiments ")
     experiment_name = "Clustering"

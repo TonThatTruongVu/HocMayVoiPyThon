@@ -102,106 +102,143 @@ import os
 
 def train_evaluate():
     st.header("⚙️ Chọn mô hình & Huấn luyện")
-
-    # Kiểm tra dữ liệu trước khi train
+    
     if "X_train" not in st.session_state:
-        st.warning("⚠️ Vui lòng chia dữ liệu trước khi train!")
+        st.error("⚠️ Chưa có dữ liệu! Hãy chia dữ liệu trước.")
         return
 
-    X_train = st.session_state["X_train"]
-    y_train = st.session_state["y_train"]
+    X_train = st.session_state.X_train.reshape(-1, 28 * 28) / 255.0
+    X_test = st.session_state.X_test.reshape(-1, 28 * 28) / 255.0
+    y_train = st.session_state.y_train
+    y_test = st.session_state.y_test
 
-    # 🌟 **Chuẩn hóa dữ liệu**
-    X_train = X_train.reshape(-1, 28 * 28) / 255.0
-
-    # 📌 **Chọn mô hình**
     model_choice = st.selectbox("Chọn mô hình:", ["K-Means", "DBSCAN"])
-
+    
     if model_choice == "K-Means":
-        st.markdown("🔹 **K-Means**: Thuật toán phân cụm chia dữ liệu thành K nhóm dựa trên khoảng cách.")
-        n_clusters = st.slider("🔢 Chọn số cụm (K):", 2, 20, 10)
+        st.markdown("""
+        - **K-Means**: Thuật toán phân cụm không giám sát, chia dữ liệu thành K nhóm dựa trên khoảng cách Euclidean.
+        - **Tham số cần chọn:**  
+            - **Số cụm (K)**: Số nhóm mong muốn (thường chọn bằng số lớp trong MNIST, ví dụ 10).
+        """)
+        n_clusters = st.slider("Số cụm (K):", 2, 20, 10)
         model = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
         params = {"n_clusters": n_clusters}
-    elif model_choice == "DBSCAN":
-        st.markdown("🛠️ **DBSCAN**: Thuật toán phân cụm dựa trên mật độ.")
-        eps = st.slider("📏 Bán kính lân cận (eps):", 0.1, 10.0, 0.5)
-        min_samples = st.slider("👥 Số điểm tối thiểu trong cụm:", 2, 20, 5)
+    else:  # DBSCAN
+        st.markdown("""
+        - **DBSCAN**: Thuật toán phân cụm dựa trên mật độ, tự động xác định số cụm dựa trên phân bố dữ liệu.
+        - **Tham số cần chọn:**
+            - **eps**: Bán kính lân cận để xác định điểm láng giềng.
+            - **min_samples**: Số điểm tối thiểu để tạo thành cụm.
+        """)
+        eps = st.slider("Bán kính lân cận (eps):", 0.1, 10.0, 0.5, step=0.1)
+        min_samples = st.slider("Số điểm tối thiểu:", 2, 20, 5)
         model = DBSCAN(eps=eps, min_samples=min_samples)
         params = {"eps": eps, "min_samples": min_samples}
 
-    # Giảm chiều dữ liệu bằng PCA trước khi huấn luyện
-    pca = PCA(n_components=2)
-    X_train_pca = pca.fit_transform(X_train)
-
+    run_name = st.text_input("🔹 Nhập tên Run:", f"{model_choice}_Run")
+    st.session_state["run_name"] = run_name if run_name else "default_run"
+    
     if st.button("🚀 Huấn luyện mô hình"):
         st.write(f"⏳ Đang huấn luyện mô hình '{model_choice}'...")
         with st.spinner("Đang xử lý dữ liệu và huấn luyện..."):
+            # Giảm chiều dữ liệu bằng PCA trước khi huấn luyện
+            pca = PCA(n_components=2)
+            X_train_pca = pca.fit_transform(X_train)
+            X_test_pca = pca.transform(X_test)
+
+            # Huấn luyện mô hình
+            model.fit(X_train_pca)
+            labels_train = model.labels_ if model_choice == "K-Means" else model.fit_predict(X_train_pca)
+            
+            # Đánh giá trên tập train
+            if model_choice == "K-Means":
+                label_mapping = {}
+                for i in range(n_clusters):
+                    mask = labels_train == i
+                    if np.sum(mask) > 0:
+                        most_common = mode(y_train[mask], keepdims=True).mode[0]
+                        label_mapping[i] = most_common
+                predicted_labels = np.array([label_mapping.get(label, -1) for label in labels_train])
+                train_accuracy = accuracy_score(y_train.astype(int), predicted_labels)
+                st.success(f"✅ Độ chính xác trên tập train: {train_accuracy:.4f}")
+            else:  # DBSCAN
+                n_clusters_train = len(set(labels_train)) - (1 if -1 in labels_train else 0)
+                st.success(f"✅ Số cụm trên tập train: {n_clusters_train}")
+
+            # Đánh giá trên tập test
+            labels_test = model.predict(X_test_pca) if model_choice == "K-Means" else model.fit_predict(X_test_pca)
+            if model_choice == "K-Means":
+                test_predicted_labels = np.array([label_mapping.get(label, -1) for label in labels_test])
+                test_accuracy = accuracy_score(y_test.astype(int), test_predicted_labels)
+                st.success(f"✅ Độ chính xác trên tập test: {test_accuracy:.4f}")
+            else:  # DBSCAN
+                n_clusters_test = len(set(labels_test)) - (1 if -1 in labels_test else 0)
+                st.success(f"✅ Số cụm trên tập test: {n_clusters_test}")
+
             # 🎯 **Tích hợp MLflow**
-            with mlflow.start_run(run_name=f"Train_{st.session_state.get('run_name', 'default_run')}") as run:
-                run_id = run.info.run_id
-                
-                # Log các tham số
-                mlflow.log_params({"model_type": model_choice, **params})
-                mlflow.log_param("train_size", X_train.shape[0])
-                if "total_samples" in st.session_state:
-                    mlflow.log_param("num_samples", st.session_state.total_samples)
-                mlflow.log_param("pca_components", 2)  # Log số chiều PCA
+            try:
+                with mlflow.start_run(run_name=f"Train_{st.session_state['run_name']}") as run:
+                    run_id = run.info.run_id
+                    
+                    # Log các tham số
+                    mlflow.log_params({"model_type": model_choice, **params})
+                    mlflow.log_param("train_size", X_train.shape[0])
+                    mlflow.log_param("test_size", X_test.shape[0])
+                    mlflow.log_param("total_samples", st.session_state.total_samples)
+                    mlflow.log_param("pca_components", 2)
 
-                # Lưu dữ liệu tạm thời và log artifact
-                os.makedirs("mlflow_artifactsb5", exist_ok=True)
-                dataset_path = "mlflow_artifactsb5/dataset.npz"
-                np.savez(dataset_path, X_train=X_train, y_train=y_train, X_train_pca=X_train_pca)
-                mlflow.log_artifact(dataset_path)
+                    # Lưu dữ liệu tạm thời và log artifact
+                    os.makedirs("mlflow_artifacts", exist_ok=True)
+                    dataset_path = "mlflow_artifacts/dataset.npz"
+                    np.savez(dataset_path, X_train=X_train, X_test=X_test, y_train=y_train, y_test=y_test, X_train_pca=X_train_pca, X_test_pca=X_test_pca)
+                    mlflow.log_artifact(dataset_path)
 
-                # Huấn luyện mô hình
-                model.fit(X_train_pca)
-                labels = model.labels_ if model_choice == "K-Means" else model.fit_predict(X_train_pca)
-                
-                # Đánh giá trên tập train
-                if model_choice == "K-Means":
-                    label_mapping = {}
-                    for i in range(n_clusters):
-                        mask = labels == i
-                        if np.sum(mask) > 0:
-                            most_common_label = mode(y_train[mask], keepdims=True).mode[0]
-                            label_mapping[i] = most_common_label
-                    predicted_labels = np.array([label_mapping[label] for label in labels])
-                    accuracy = accuracy_score(y_train, predicted_labels)
-                    st.success(f"✅ Huấn luyện thành công!")
-                    st.write(f"🎯 **Độ chính xác của mô hình:** `{accuracy * 100:.2f}%`")
-                    mlflow.log_metric("train_accuracy", accuracy)
-                else:  # DBSCAN
-                    n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
-                    st.success(f"✅ Huấn luyện thành công!")
-                    st.write(f"🎯 **Số cụm tìm được:** `{n_clusters_}`")
-                    mlflow.log_metric("n_clusters", n_clusters_)
+                    # Log độ đo
+                    if model_choice == "K-Means":
+                        mlflow.log_metric("train_accuracy", train_accuracy)
+                        mlflow.log_metric("test_accuracy", test_accuracy)
+                    else:
+                        mlflow.log_metric("n_clusters_train", n_clusters_train)
+                        mlflow.log_metric("n_clusters_test", n_clusters_test)
 
-                # Log mô hình
-                mlflow.sklearn.log_model(model, model_choice.lower())
+                    # Log mô hình
+                    mlflow.sklearn.log_model(model, model_choice.lower())
 
-            # 🔍 Lưu mô hình vào session_state
+                # Hiển thị link MLflow
+                if "mlflow_url" in st.session_state and st.session_state.mlflow_initialized:
+                    experiment_id = mlflow.get_experiment_by_name("Clustering").experiment_id
+                    mlflow_link = f"{st.session_state.mlflow_url}/#/experiments/{experiment_id}/runs/{run_id}"
+                    st.success(f"✅ Đã log dữ liệu cho **Train_{st.session_state['run_name']}**!")
+                    st.markdown(f"🔗 [Truy cập MLflow UI]({mlflow_link})")
+                else:
+                    st.info("📝 MLflow không khả dụng trên Streamlit Cloud. Dữ liệu đã được log cục bộ.")
+            except Exception as e:
+                st.warning(f"⚠️ Không thể log vào MLflow: {str(e)}. Huấn luyện vẫn thành công nhưng không log lên DagsHub.")
+
+            # Lưu mô hình vào session_state
             if "models" not in st.session_state:
                 st.session_state["models"] = []
-
+            
             model_name = model_choice.lower().replace(" ", "_")
-            count = 1
-            new_model_name = model_name
-            while any(m["name"] == new_model_name for m in st.session_state["models"]):
+            if model_choice == "K-Means":
+                model_name += f"_{n_clusters}"
+            else:
+                model_name += f"_eps{eps}_min{min_samples}"
+            
+            existing_model = next((item for item in st.session_state["models"] if item["name"] == model_name), None)
+            if existing_model:
+                count = 1
                 new_model_name = f"{model_name}_{count}"
-                count += 1
-
-            st.session_state["models"].append({"name": new_model_name, "model": model})
-            st.write(f"🔹 **Mô hình đã được lưu với tên:** `{new_model_name}`")
-            st.write(f"📋 **Danh sách các mô hình:** {[m['name'] for m in st.session_state['models']]}")
-
-            # Hiển thị link MLflow
-            mlflow_tracking_uri = "https://dagshub.com/TonThatTruongVu/MNIST-ClusteringAlgorithms.mlflow"
-            experiment_id = mlflow.get_experiment_by_name("Clustering").experiment_id
-            mlflow_link = f"{mlflow_tracking_uri}/#/experiments/{experiment_id}/runs/{run_id}"
-            st.success(f"✅ Đã log dữ liệu cho **Train_{st.session_state.get('run_name', 'default_run')}**!")
-            st.markdown(f"🔗 [Truy cập MLflow UI]({mlflow_link})")
-
-
+                while any(item["name"] == new_model_name for item in st.session_state["models"]):
+                    count += 1
+                    new_model_name = f"{model_name}_{count}"
+                model_name = new_model_name
+                st.warning(f"⚠️ Mô hình được lưu với tên mới: {model_name}")
+            
+            st.session_state["models"].append({"name": model_name, "model": model})
+            st.write(f"🔹 Mô hình đã được lưu với tên: {model_name}")
+            st.write(f"Tổng số mô hình hiện tại: {len(st.session_state['models'])}")
+            st.write("📋 Danh sách các mô hình đã lưu:", ", ".join([m["name"] for m in st.session_state["models"]]))
 
 from PIL import Image
 import numpy as np
@@ -468,9 +505,14 @@ def main():
         mlflow.set_tracking_uri("https://dagshub.com/TonThatTruongVu/MNIST-ClusteringAlgorithms.mlflow")
         os.environ["MLFLOW_TRACKING_USERNAME"] = "TonThatTruongVu"
         os.environ["MLFLOW_TRACKING_PASSWORD"] = "519c4a864e131de52197f54d170c130beb15ffd5"
-        mlflow.set_experiment("Clustering")
-        st.session_state.mlflow_url = "https://dagshub.com/TonThatTruongVu/MNIST-ClusteringAlgorithms.mlflow"
-        st.session_state.mlflow_initialized = True
+        
+        try:
+            mlflow.set_experiment("Clustering")
+            st.session_state.mlflow_url = "https://dagshub.com/TonThatTruongVu/MNIST-ClusteringAlgorithms.mlflow"
+            st.session_state.mlflow_initialized = True
+        except Exception as e:
+            st.error(f"⚠️ Không thể kết nối MLflow: {str(e)}. MLflow sẽ không hoạt động.")
+            st.session_state.mlflow_initialized = False
 
     tabs = st.tabs(["Lý thuyết K-Means", "Lý thuyết DBSCAN", "Data", "Huấn luyện", "Dự đoán"])
     

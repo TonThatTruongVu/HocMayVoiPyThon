@@ -1,41 +1,28 @@
 import streamlit as st
 
-# Thiết lập cấu hình trang với layout rộng và biểu tượng
-st.set_page_config(
-    page_title="Multi-Page App",
-    page_icon="📊",
-    layout="wide",
+# Cấu hình trang
+st.set_page_config(page_title="Multi-Page App", page_icon="📊", layout="wide")
+
+# Sidebar điều hướng
+st.sidebar.title("🧭 Điều hướng Ứng dụng")
+menu = st.sidebar.radio(
+    "Chọn ứng dụng:",
+    ["🌟 Trang Chính", "📊 Linear Regression", "🖊️ MNIST Classification", "🔍 Clustering Algorithms"],
 )
 
-# Sidebar với nền đen và chữ trắng
-st.sidebar.markdown(
-    """
-    <div style='background-color: #1E1E1E; padding: 10px; border-radius: 5px;'>
-        <h2 style='text-align: center; color: #FFFFFF;'>🧭 Điều hướng Ứng dụng</h2>
-        <p style='text-align: center; color: #D3D3D3;'>Chọn một ứng dụng để trải nghiệm!</p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+# Xử lý nội dung trang chính
+if menu == "🌟 Trang Chính":
+    st.title("🌟 Ứng dụng Đa năng với Streamlit")
+    st.write("Chào mừng bạn đến với ứng dụng đa trang!")
 
-# Nội dung chính với nền đen và chữ trắng
-st.title("🌟 Ứng dụng Đa năng với Streamlit")
-st.markdown(
-    """
-    <div style='background-color: #1E1E1E; padding: 20px; border-radius: 10px;'>
-        <h3 style='color: #4DA8DA;'>📋 Danh sách Ứng dụng</h3>
-        <p style='color: #D3D3D3;'>Khám phá các ứng dụng thú vị bên dưới:</p>
-        <ul style='list-style-type: none; padding-left: 0; color: #FFFFFF;'>
-            <li>➡️ <strong style='color: #FF6F61;'>Linear Regression</strong>: Phân tích hồi quy tuyến tính.</li>
-            <li>➡️ <strong style='color: #FF6F61;'>MNIST Classification</strong>: Phân loại chữ số viết tay.</li>
-            <li>➡️ <strong style='color: #FF6F61;'>Clustering Algorithms</strong>: Các thuật toán phân cụm.</li>
-        </ul>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-# Footer với nền đen và chữ xám nhạt
-st.markdown(
-    "<p style='text-align: center; color: #A9A9A9; font-size: 12px;'>Được xây dựng với Streamlit</p>",
-    unsafe_allow_html=True
-)
+elif menu == "📊 Linear Regression":
+    from pages import linear_regression
+    linear_regression.show()
+
+elif menu == "🖊️ MNIST Classification":
+    from pages import mnist_classification
+    mnist_classification.show()
+
+elif menu == "🔍 Clustering Algorithms":
+    from pages import clustering_algorithms
+    clustering_algorithms.show()

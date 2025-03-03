@@ -15,6 +15,7 @@ import os
 import random
 from datetime import datetime
 
+
 # Tải dữ liệu MNIST từ OpenML
 @st.cache_data
 def load_mnist_data():
@@ -25,24 +26,34 @@ def load_mnist_data():
 # Tab hiển thị dữ liệu
 def data_processing():
     st.header("📘 Dữ Liệu MNIST")
-    X, y = load_mnist_data()
     
-    st.write("""
-        **Thông tin tập dữ liệu MNIST:**
-        - Tổng số mẫu: {}
-        - Kích thước mỗi ảnh: 28 × 28 pixels (784 đặc trưng)
-        - Số lớp: 10 (chữ số từ 0-9)
-    """.format(X.shape[0]))
+    if st.button("Tải dữ liệu MNIST từ OpenML"):
+        with st.spinner("Đang tải dữ liệu..."):
+            X, y = load_mnist_data()
+            st.session_state.X = X
+            st.session_state.y = y
+            
+            st.write("""
+                **Thông tin tập dữ liệu MNIST:**
+                - Tổng số mẫu: {}
+                - Kích thước mỗi ảnh: 28 × 28 pixels (784 đặc trưng)
+                - Số lớp: 10 (chữ số từ 0-9)
+            """.format(X.shape[0]))
 
-    st.subheader("Một số hình ảnh mẫu")
-    n_samples = 5
-    fig, axes = plt.subplots(1, n_samples, figsize=(10, 3))
-    indices = np.random.choice(X.shape[0], n_samples, replace=False)
-    for i, idx in enumerate(indices):
-        axes[i].imshow(X[idx].reshape(28, 28), cmap='gray')
-        axes[i].set_title(f"Label: {y[idx]}")
-        axes[i].axis("off")
-    st.pyplot(fig)
+            st.subheader("Một số hình ảnh mẫu")
+            n_samples = 10  # Hiển thị 10 ảnh mẫu thay vì 5
+            fig, axes = plt.subplots(2, 5, figsize=(15, 6))  # Sắp xếp thành 2 hàng, 5 cột
+            indices = np.random.choice(X.shape[0], n_samples, replace=False)
+            for i, idx in enumerate(indices):
+                row = i // 5  # Hàng (0 hoặc 1)
+                col = i % 5   # Cột (0 đến 4)
+                axes[row, col].imshow(X[idx].reshape(28, 28), cmap='gray')
+                axes[row, col].set_title(f"Label: {y[idx]}")
+                axes[row, col].axis("off")
+            plt.tight_layout()  # Đảm bảo bố cục gọn gàng
+            st.pyplot(fig)
+    else:
+        st.info("Nhấn nút 'Tải dữ liệu MNIST từ OpenML' để xem thông tin và hình ảnh mẫu.")
 
 # Tab chia dữ liệu
 def split_data():

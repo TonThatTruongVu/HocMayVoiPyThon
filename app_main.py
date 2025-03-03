@@ -16,13 +16,13 @@ if menu == "🌟 Trang Chính":
     st.write("Chào mừng bạn đến với ứng dụng đa trang!")
 
 elif menu == "📊 Linear Regression":
-    from pages import linear_regression
-    linear_regression.show()
+    from pages import Linear_Regression
+    Linear_Regression.show()
 
 elif menu == "🖊️ MNIST Classification":
-    from pages import mnist_classification
-    mnist_classification.show()
+    from pages import Classification_MNIST
+    Classification_MNIST.show()
 
 elif menu == "🔍 Clustering Algorithms":
-    from pages import clustering_algorithms
-    clustering_algorithms.show()
+    from pages import Clustering_Algorithms
+    Clustering_Algorithms.show()

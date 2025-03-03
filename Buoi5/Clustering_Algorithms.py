@@ -234,7 +234,7 @@ def train_evaluate():
             
             if run_id:  # Chỉ hiển thị link nếu log thành công
                 mlflow_tracking_uri = "https://dagshub.com/TonThatTruongVu/MNIST-ClusteringAlgorithms.mlflow"
-                experiment_id = experiment_id if 'experiment_id' in locals() else "0"  # Dùng ID=0 nếu không có experiment_id
+                experiment_id = mlflow.get_experiment_by_name("Clustering").experiment_id  # Dùng ID=0 nếu không có experiment_id
                 mlflow_link = f"{mlflow_tracking_uri}/#/experiments/{experiment_id}/runs/{run_id}"
                 st.success(f"✅ Đã log dữ liệu cho 'Train_{st.session_state['run_name']}'!")
                 st.markdown(f"🔗 [Truy cập MLflow UI]({mlflow_link})")

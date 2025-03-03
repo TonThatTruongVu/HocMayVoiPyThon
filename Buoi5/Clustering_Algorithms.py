@@ -348,7 +348,7 @@ def demo():
             elif isinstance(model, DBSCAN):
                 cluster = model.fit_predict(input_data_pca)[0]
                 st.subheader(f"🔢 Cụm dự đoán: {cluster if cluster != -1 else 'Nhiễu (không thuộc cụm)'}")
-            
+            show_experiment_selector()    
         else:
           st.error(f"⚠️ Hãy {'vẽ một số' if input_method == 'Vẽ số' else 'tải ảnh'} trước khi dự đoán!")
 def show_experiment_selector():

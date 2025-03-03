@@ -129,32 +129,60 @@ def train_evaluate():
     if st.button("🚀 Huấn luyện mô hình"):
         st.write(f"⏳ Đang huấn luyện mô hình '{model_choice}'...")
         with st.spinner("Đang xử lý dữ liệu và huấn luyện..."):
-            # Kiểm tra experiment "Clustering", nếu không tồn tại thì dùng experiment mặc định (ID=0)
-            experiment_name = "Clustering"
-            experiment = mlflow.get_experiment_by_name(experiment_name)
-            if experiment is None:
-                try:
+            # 🎯 **Tích hợp MLflow**
+            try:
+                # Kiểm tra và tạo experiment nếu cần
+                experiment_name = "Clustering"
+                experiment = mlflow.get_experiment_by_name(experiment_name)
+                if experiment is None:
                     experiment_id = mlflow.create_experiment(experiment_name)
                     st.info(f"✅ Đã tạo mới experiment '{experiment_name}' với ID: {experiment_id}")
-                except Exception as e:
-                    st.warning(f"⚠️ Không thể tạo experiment '{experiment_name}': {str(e)}. Sử dụng experiment mặc định (ID=0).")
-                    experiment_id = "0"  # Dùng experiment mặc định từ link
-            else:
-                experiment_id = experiment.experiment_id
+                else:
+                    experiment_id = experiment.experiment_id
 
-            # Huấn luyện và log với MLflow
-            with mlflow.start_run(run_name=run_name, experiment_id=experiment_id) as run:
-                run_id = run.info.run_id
-                mlflow.log_params(params)
-                mlflow.log_param("train_size", X_train.shape[0])
-                mlflow.log_param("test_size", X_test.shape[0])
-                mlflow.log_param("total_samples", st.session_state.total_samples)
+                with mlflow.start_run(run_name=run_name, experiment_id=experiment_id) as run:
+                    run_id = run.info.run_id
 
-                # Huấn luyện mô hình trên dữ liệu gốc 784 chiều
+                    # Log các tham số
+                    mlflow.log_params(params)
+                    mlflow.log_param("train_size", X_train.shape[0])
+                    mlflow.log_param("test_size", X_test.shape[0])
+                    mlflow.log_param("total_samples", st.session_state.total_samples)
+                    mlflow.log_param("model_type", model_choice)
+
+                    # Huấn luyện mô hình trên dữ liệu gốc 784 chiều
+                    model.fit(X_train)
+                    labels_train = model.labels_ if model_choice == "K-Means" else model.fit_predict(X_train)
+                    
+                    # Đánh giá trên tập train (chỉ cho K-Means)
+                    if model_choice == "K-Means":
+                        label_mapping = {}
+                        for i in range(n_clusters):
+                            mask = labels_train == i
+                            if np.sum(mask) > 0:
+                                most_common = np.bincount(y_train[mask].astype(int)).argmax()
+                                label_mapping[i] = most_common
+                        predicted_labels = np.array([label_mapping.get(label, 0) for label in labels_train])
+                        accuracy = accuracy_score(y_train.astype(int), predicted_labels)
+                        st.success(f"✅ Độ chính xác trên tập train: {accuracy:.4f}")
+                        mlflow.log_metric("train_accuracy", accuracy)
+
+                    # Log mô hình
+                    mlflow.sklearn.log_model(model, "model")
+
+                    # Log kết quả trên tập test (nếu cần)
+                    labels_test = model.predict(X_test) if model_choice == "K-Means" else model.fit_predict(X_test)
+                    if model_choice == "K-Means":
+                        test_predicted_labels = np.array([label_mapping.get(label, 0) for label in labels_test])
+                        test_accuracy = accuracy_score(y_test.astype(int), test_predicted_labels)
+                        mlflow.log_metric("test_accuracy", test_accuracy)
+                        st.success(f"✅ Độ chính xác trên tập test: {test_accuracy:.4f}")
+
+            except Exception as e:
+                st.error(f"⚠️ Lỗi khi log vào MLflow: {str(e)}. Huấn luyện cục bộ hoàn tất.")
+                # Huấn luyện cục bộ nếu MLflow lỗi
                 model.fit(X_train)
                 labels_train = model.labels_ if model_choice == "K-Means" else model.fit_predict(X_train)
-                
-                # Đánh giá trên tập train (chỉ cho K-Means)
                 if model_choice == "K-Means":
                     label_mapping = {}
                     for i in range(n_clusters):
@@ -165,11 +193,8 @@ def train_evaluate():
                     predicted_labels = np.array([label_mapping.get(label, 0) for label in labels_train])
                     accuracy = accuracy_score(y_train.astype(int), predicted_labels)
                     st.success(f"✅ Độ chính xác trên tập train: {accuracy:.4f}")
-                    mlflow.log_metric("train_accuracy", accuracy)
-                
-                # Lưu mô hình vào MLflow
-                mlflow.sklearn.log_model(model, "model")
-            
+                run_id = "local_run"
+
             # Lưu mô hình vào session_state
             if "models" not in st.session_state:
                 st.session_state["models"] = []
@@ -195,10 +220,13 @@ def train_evaluate():
             st.write(f"Tổng số mô hình hiện tại: {len(st.session_state['models'])}")
             st.write("📋 Danh sách các mô hình đã lưu:", ", ".join([m["name"] for m in st.session_state["models"]]))
             
-            mlflow_tracking_uri = "https://dagshub.com/TonThatTruongVu/MNIST-ClusteringAlgorithms.mlflow"
-            mlflow_link = f"{mlflow_tracking_uri}/#/experiments/{experiment_id}/runs/{run_id}"
-            st.success(f"✅ Đã log dữ liệu cho '{run_name}'!")
-            st.markdown(f"🔗 [Truy cập MLflow UI]({mlflow_link})")
+            if "run_id" in locals() and run_id != "local_run":
+                mlflow_tracking_uri = "https://dagshub.com/TonThatTruongVu/MNIST-ClusteringAlgorithms.mlflow"
+                mlflow_link = f"{mlflow_tracking_uri}/#/experiments/{experiment_id}/runs/{run_id}"
+                st.success(f"✅ Đã log dữ liệu cho '{run_name}'!")
+                st.markdown(f"🔗 [Truy cập MLflow UI]({mlflow_link})")
+            else:
+                st.info("📝 Huấn luyện hoàn tất nhưng không log MLflow do lỗi kết nối.")
 
 from PIL import Image
 import numpy as np

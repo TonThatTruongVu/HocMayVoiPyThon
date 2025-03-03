@@ -7,34 +7,36 @@ st.set_page_config(
     layout="wide",
 )
 
-# Sidebar với tiêu đề nổi bật
+# Sidebar với nền đen và chữ trắng
 st.sidebar.markdown(
     """
-    <h2 style='text-align: center; color: #FF4B4B;'>🧭 Điều hướng Ứng dụng</h2>
-    <p style='text-align: center;'>Chọn một ứng dụng để trải nghiệm!</p>
+    <div style='background-color: #1E1E1E; padding: 10px; border-radius: 5px;'>
+        <h2 style='text-align: center; color: #FFFFFF;'>🧭 Điều hướng Ứng dụng</h2>
+        <p style='text-align: center; color: #D3D3D3;'>Chọn một ứng dụng để trải nghiệm!</p>
+    </div>
     """,
     unsafe_allow_html=True
 )
 
-# Nội dung chính với phong cách đẹp hơn
+# Nội dung chính với nền đen và chữ trắng
 st.title("🌟 Ứng dụng Đa năng với Streamlit")
 st.markdown(
     """
-    <div style='background-color: #F0F2F6; padding: 20px; border-radius: 10px;'>
-        <h3 style='color: #1F77B4;'>📋 Danh sách Ứng dụng</h3>
-        <p>Khám phá các ứng dụng thú vị bên dưới:</p>
-        <ul style='list-style-type: none; padding-left: 0;'>
-            <li>➡️ <strong style='color: #FF4B4B;'>Linear Regression</strong>: Phân tích hồi quy tuyến tính.</li>
-            <li>➡️ <strong style='color: #FF4B4B;'>MNIST Classification</strong>: Phân loại chữ số viết tay.</li>
-            <li>➡️ <strong style='color: #FF4B4B;'>Clustering Algorithms</strong>: Các thuật toán phân cụm.</li>
+    <div style='background-color: #1E1E1E; padding: 20px; border-radius: 10px;'>
+        <h3 style='color: #4DA8DA;'>📋 Danh sách Ứng dụng</h3>
+        <p style='color: #D3D3D3;'>Khám phá các ứng dụng thú vị bên dưới:</p>
+        <ul style='list-style-type: none; padding-left: 0; color: #FFFFFF;'>
+            <li>➡️ <strong style='color: #FF6F61;'>Linear Regression</strong>: Phân tích hồi quy tuyến tính.</li>
+            <li>➡️ <strong style='color: #FF6F61;'>MNIST Classification</strong>: Phân loại chữ số viết tay.</li>
+            <li>➡️ <strong style='color: #FF6F61;'>Clustering Algorithms</strong>: Các thuật toán phân cụm.</li>
         </ul>
     </div>
     """,
     unsafe_allow_html=True
 )
 
-# Thêm một dòng footer nhỏ
+# Footer với nền đen và chữ xám nhạt
 st.markdown(
-    "<p style='text-align: center; color: #888888; font-size: 12px;'>Được xây dựng với ❤️ bởi Streamlit</p>",
+    "<p style='text-align: center; color: #A9A9A9; font-size: 12px;'>Được xây dựng với Streamlit</p>",
     unsafe_allow_html=True
 )

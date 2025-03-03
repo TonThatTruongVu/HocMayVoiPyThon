@@ -85,9 +85,9 @@ import streamlit as st
 import numpy as np
 from sklearn.cluster import KMeans, DBSCAN
 from sklearn.metrics import accuracy_score
-from sklearn.decomposition import PCA
 import mlflow
 import mlflow.sklearn
+import os
 
 def train_evaluate():
     st.header("⚙️ Chọn mô hình & Huấn luyện")
@@ -125,6 +125,7 @@ def train_evaluate():
         params = {"eps": eps, "min_samples": min_samples}
 
     run_name = st.text_input("🔹 Nhập tên Run:", f"{model_choice}_Run")
+    st.session_state["run_name"] = run_name if run_name else "default_run"
     
     if st.button("🚀 Huấn luyện mô hình"):
         st.write(f"⏳ Đang huấn luyện mô hình '{model_choice}'...")
@@ -135,20 +136,31 @@ def train_evaluate():
                 experiment_name = "Clustering"
                 experiment = mlflow.get_experiment_by_name(experiment_name)
                 if experiment is None:
-                    experiment_id = mlflow.create_experiment(experiment_name)
-                    st.info(f"✅ Đã tạo mới experiment '{experiment_name}' với ID: {experiment_id}")
+                    try:
+                        experiment_id = mlflow.create_experiment(experiment_name)
+                        st.info(f"✅ Đã tạo mới experiment '{experiment_name}' với ID: {experiment_id}")
+                    except Exception as e:
+                        st.warning(f"⚠️ Không thể tạo experiment '{experiment_name}': {str(e)}. Sử dụng experiment mặc định (ID=0).")
+                        experiment_id = "0"  # Fallback về experiment mặc định từ link DagsHub
                 else:
                     experiment_id = experiment.experiment_id
 
-                with mlflow.start_run(run_name=run_name, experiment_id=experiment_id) as run:
+                with mlflow.start_run(run_name=f"Train_{st.session_state['run_name']}", experiment_id=experiment_id) as run:
                     run_id = run.info.run_id
 
                     # Log các tham số
-                    mlflow.log_params(params)
+                    mlflow.log_params({"model": model_choice, **params})
                     mlflow.log_param("train_size", X_train.shape[0])
                     mlflow.log_param("test_size", X_test.shape[0])
                     mlflow.log_param("total_samples", st.session_state.total_samples)
-                    mlflow.log_param("model_type", model_choice)
+
+                    # Lưu dữ liệu tạm thời và log artifact
+                    os.makedirs("mlflow_artifacts", exist_ok=True)
+                    np.save("mlflow_artifacts/X_train.npy", X_train)
+                    np.save("mlflow_artifacts/X_test.npy", X_test)
+                    np.save("mlflow_artifacts/y_train.npy", y_train)
+                    np.save("mlflow_artifacts/y_test.npy", y_test)
+                    mlflow.log_artifacts("mlflow_artifacts")
 
                     # Huấn luyện mô hình trên dữ liệu gốc 784 chiều
                     model.fit(X_train)
@@ -163,20 +175,20 @@ def train_evaluate():
                                 most_common = np.bincount(y_train[mask].astype(int)).argmax()
                                 label_mapping[i] = most_common
                         predicted_labels = np.array([label_mapping.get(label, 0) for label in labels_train])
-                        accuracy = accuracy_score(y_train.astype(int), predicted_labels)
-                        st.success(f"✅ Độ chính xác trên tập train: {accuracy:.4f}")
-                        mlflow.log_metric("train_accuracy", accuracy)
+                        train_accuracy = accuracy_score(y_train.astype(int), predicted_labels)
+                        st.success(f"✅ Độ chính xác trên tập train: {train_accuracy:.4f}")
+                        mlflow.log_metric("train_accuracy", train_accuracy)
 
-                    # Log mô hình
-                    mlflow.sklearn.log_model(model, "model")
-
-                    # Log kết quả trên tập test (nếu cần)
+                    # Đánh giá trên tập test
                     labels_test = model.predict(X_test) if model_choice == "K-Means" else model.fit_predict(X_test)
                     if model_choice == "K-Means":
                         test_predicted_labels = np.array([label_mapping.get(label, 0) for label in labels_test])
                         test_accuracy = accuracy_score(y_test.astype(int), test_predicted_labels)
-                        mlflow.log_metric("test_accuracy", test_accuracy)
                         st.success(f"✅ Độ chính xác trên tập test: {test_accuracy:.4f}")
+                        mlflow.log_metric("test_accuracy", test_accuracy)
+
+                    # Log mô hình
+                    mlflow.sklearn.log_model(model, model_choice.lower())
 
             except Exception as e:
                 st.error(f"⚠️ Lỗi khi log vào MLflow: {str(e)}. Huấn luyện cục bộ hoàn tất.")
@@ -191,9 +203,9 @@ def train_evaluate():
                             most_common = np.bincount(y_train[mask].astype(int)).argmax()
                             label_mapping[i] = most_common
                     predicted_labels = np.array([label_mapping.get(label, 0) for label in labels_train])
-                    accuracy = accuracy_score(y_train.astype(int), predicted_labels)
-                    st.success(f"✅ Độ chính xác trên tập train: {accuracy:.4f}")
-                run_id = "local_run"
+                    train_accuracy = accuracy_score(y_train.astype(int), predicted_labels)
+                    st.success(f"✅ Độ chính xác trên tập train: {train_accuracy:.4f}")
+                run_id = None
 
             # Lưu mô hình vào session_state
             if "models" not in st.session_state:
@@ -220,10 +232,11 @@ def train_evaluate():
             st.write(f"Tổng số mô hình hiện tại: {len(st.session_state['models'])}")
             st.write("📋 Danh sách các mô hình đã lưu:", ", ".join([m["name"] for m in st.session_state["models"]]))
             
-            if "run_id" in locals() and run_id != "local_run":
+            if run_id:  # Chỉ hiển thị link nếu log thành công
                 mlflow_tracking_uri = "https://dagshub.com/TonThatTruongVu/MNIST-ClusteringAlgorithms.mlflow"
+                experiment_id = experiment_id if 'experiment_id' in locals() else "0"  # Dùng ID=0 nếu không có experiment_id
                 mlflow_link = f"{mlflow_tracking_uri}/#/experiments/{experiment_id}/runs/{run_id}"
-                st.success(f"✅ Đã log dữ liệu cho '{run_name}'!")
+                st.success(f"✅ Đã log dữ liệu cho 'Train_{st.session_state['run_name']}'!")
                 st.markdown(f"🔗 [Truy cập MLflow UI]({mlflow_link})")
             else:
                 st.info("📝 Huấn luyện hoàn tất nhưng không log MLflow do lỗi kết nối.")

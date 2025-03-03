@@ -188,8 +188,8 @@ def train_evaluate():
                     mlflow.log_param("pca_components", 2)
 
                     # Lưu dữ liệu tạm thời và log artifact
-                    os.makedirs("mlflow_artifacts", exist_ok=True)
-                    dataset_path = "mlflow_artifacts/dataset.npz"
+                    os.makedirs("mlflow_artifactsb5", exist_ok=True)
+                    dataset_path = "mlflow_artifactsb5/dataset.npz"
                     np.savez(dataset_path, X_train=X_train, X_test=X_test, y_train=y_train, y_test=y_test, X_train_pca=X_train_pca, X_test_pca=X_test_pca)
                     mlflow.log_artifact(dataset_path)
 

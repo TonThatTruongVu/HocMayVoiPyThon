@@ -12,3 +12,4 @@ opencv-python-headless
 langchain-openai
 dagshub
 plotly
+kaleido

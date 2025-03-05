@@ -305,12 +305,10 @@ def preprocess_uploaded_image(uploaded_file):
     return None
 
 def du_doan():
-  
+   
     st.header("✍️ Dự đoán số")
 
-
-
-
+   
     if "models" not in st.session_state or not st.session_state["models"]:
         st.error("⚠️ Chưa có mô hình nào được huấn luyện. Vui lòng huấn luyện mô hình trước!")
         return
@@ -357,8 +355,27 @@ def du_doan():
 
     if img is not None:
         st.image(Image.fromarray((img.reshape(28, 28) * 255).astype(np.uint8)), caption="Ảnh sau xử lý", width=100)
+        
+        # Dự đoán nhãn
         prediction = model.predict(img)
         st.subheader(f"🔢 Dự đoán: {prediction[0]}")
+
+        # Lấy độ tin cậy (confidence scores)
+        confidence_scores = model.predict_proba(img)[0]  # Lấy xác suất cho tất cả các lớp
+        predicted_class_confidence = confidence_scores[prediction[0]]  # Độ tin cậy của nhãn dự đoán
+        
+        # Hiển thị độ tin cậy của nhãn dự đoán
+        st.write(f"📈 **Độ tin cậy:** {predicted_class_confidence:.4f} ({predicted_class_confidence * 100:.2f}%)")
+
+        # Hiển thị tất cả độ tin cậy của các lớp (tùy chọn)
+        st.write("**Xác suất cho từng lớp (0-9):**")
+        confidence_df = pd.DataFrame({
+            "Nhãn": range(10),
+            "Xác suất": confidence_scores
+        })
+        st.bar_chart(confidence_df.set_index("Nhãn"))
+
+        # Hiển thị thông tin MLflow Experiments
         st.write("📊 Hiển thị thông tin MLflow Experiments:")
         show_experiment_selector(context="predict")
 

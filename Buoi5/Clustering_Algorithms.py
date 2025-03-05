@@ -460,7 +460,7 @@ def predict():
         else:
             st.subheader(f"🔢 Dự đoán: Cụm {cluster_label}")
         st.write(f"**Độ tin cậy:** {confidence:.2%}")
-    show_experiment_selector(context="mlflow")
+        show_experiment_selector(context="mlflow")
 
 # Tab MLflow
 def show_experiment_selector(context="mlflow"):

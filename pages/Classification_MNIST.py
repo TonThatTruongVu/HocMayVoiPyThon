@@ -1,9 +1,9 @@
 import streamlit as st
-from Buoi4.Classification import main
+from Buoi4.Classification import Classification
 
 st.title("🔢 Classification MNIST")
 
 
 # Gọi hàm Classification từ modul
-main()
+Classification()
     

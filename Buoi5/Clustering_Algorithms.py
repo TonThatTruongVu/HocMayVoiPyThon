@@ -85,7 +85,7 @@ def ly_thuyet_K_means():
     Thuật toán K-Means hoạt động qua các bước lặp đi lặp lại như sau:
     """)
 
-
+   
     with st.expander("1. Khởi tạo tâm cụm (Initialization)"):
         st.markdown("""
         - Chọn ngẫu nhiên **K điểm** từ tập dữ liệu làm **tâm cụm ban đầu** (centroids).  
@@ -142,7 +142,7 @@ def ly_thuyet_DBSCAN():
 
     st.subheader("🔍 Cách hoạt động chi tiết")
     st.markdown("""
-    DBSCAN phân cụm dựa trên hai tham số chính:  
+    DBSCAN phân cụm dựaLIM trên hai tham số chính:  
     - **eps**: Bán kính lân cận (khoảng cách tối đa giữa hai điểm để coi là "gần nhau").  
     - **min_samples**: Số điểm tối thiểu trong vùng lân cận để hình thành một cụm.  
     Các bước cụ thể:
@@ -338,9 +338,10 @@ def clustering():
                     "name": "dbscan",
                     "run_name": f"DBSCAN_{st.session_state['run_name']}",
                     "model": model,
-                    "X_train": X_train,  # Lưu X_train để tính độ tin cậy cho DBSCAN
+                    "X_train": X_train,
                     "eps": eps,
-                    "min_samples": min_samples
+                    "min_samples": min_samples,
+                    "labels": labels
                 })
 
     # Hiển thị kết quả
@@ -428,39 +429,52 @@ def predict():
 
     if img is not None:
         st.image(Image.fromarray((img.reshape(28, 28) * 255).astype(np.uint8)), caption="Ảnh sau xử lý", width=100)
-        cluster_label = model.predict(img)[0]
-
-        # Tính độ tin cậy
+        
+        cluster_label = None
         confidence = 0.0
+        
         if model_name == "kmeans":
-            # Tính khoảng cách đến tất cả tâm cụm
+            # Dự đoán với K-means
+            cluster_label = model.predict(img)[0]
             distances = euclidean_distances(img, model.cluster_centers_)[0]
             nearest_distance = distances[cluster_label]
             total_distance = np.sum(distances)
             if total_distance > 0:
-                confidence = 1 - (nearest_distance / total_distance)  # Độ tin cậy cao khi khoảng cách đến tâm gần nhất nhỏ
-            confidence = max(0.0, min(1.0, confidence))  # Giới hạn trong [0, 1]
+                confidence = 1 - (nearest_distance / total_distance)
+            confidence = max(0.0, min(1.0, confidence))
         
         elif model_name == "dbscan":
-            # Nếu là nhiễu, độ tin cậy = 0
-            if cluster_label == -1:
-                confidence = 0.0
+            # Dự đoán thủ công với DBSCAN
+            X_train = selected_model_info["X_train"]
+            eps = selected_model_info["eps"]
+            min_samples = selected_model_info["min_samples"]
+            labels_train = selected_model_info["labels"]
+            
+            # Tính khoảng cách từ img đến tất cả điểm trong X_train
+            distances = euclidean_distances(img, X_train)[0]
+            neighbors_indices = np.where(distances <= eps)[0]
+            neighbors_count = len(neighbors_indices)
+            
+            if neighbors_count >= min_samples:
+                # Nếu đủ láng giềng, tìm cụm phổ biến nhất trong số các láng giềng
+                neighbor_labels = labels_train[neighbors_indices]
+                valid_labels = neighbor_labels[neighbor_labels != -1]  # Loại bỏ nhiễu
+                if len(valid_labels) > 0:
+                    cluster_label = np.bincount(valid_labels).argmax()  # Cụm phổ biến nhất
+                    confidence = min(1.0, neighbors_count / min_samples)
+                else:
+                    cluster_label = -1  # Không có cụm hợp lệ
+                    confidence = 0.0
             else:
-                # Tính số lượng điểm lân cận trong bán kính eps
-                X_train = selected_model_info["X_train"]
-                eps = selected_model_info["eps"]
-                min_samples = selected_model_info["min_samples"]
-                distances = euclidean_distances(img, X_train)[0]
-                neighbors_count = np.sum(distances <= eps)
-                confidence = min(1.0, neighbors_count / min_samples)  # Độ tin cậy dựa trên tỷ lệ láng giềng
+                cluster_label = -1  # Nhiễu
+                confidence = 0.0
 
-        # Hiển thị kết quả dự đoán và độ tin cậy
+        # Hiển thị kết quả
         if cluster_label == -1:
             st.subheader("🔢 Dự đoán: Điểm nhiễu (Noise)")
         else:
             st.subheader(f"🔢 Dự đoán: Cụm {cluster_label}")
         st.write(f"**Độ tin cậy:** {confidence:.2%}")
-        show_experiment_selector(context="mlflow")
 
 # Tab MLflow
 def show_experiment_selector(context="mlflow"):

@@ -29,6 +29,7 @@ st.markdown(
             <li>➡️ <strong style='color: #FF6F61;'>Linear Regression</strong>: Phân tích hồi quy tuyến tính.</li>
             <li>➡️ <strong style='color: #FF6F61;'>MNIST Classification</strong>: Phân loại chữ số viết tay.</li>
             <li>➡️ <strong style='color: #FF6F61;'>Clustering Algorithms</strong>: Các thuật toán phân cụm.</li>
+            <li>➡️ <strong style='color: #FF6F61;'>Assignment - PCA & t-SNE MNIST</strong>: Các kỹ thuật giảm chiều dữ liệu trên tập MNIST.</li>
         </ul>
     </div>
     """,

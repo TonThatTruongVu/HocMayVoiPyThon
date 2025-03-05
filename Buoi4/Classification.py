@@ -466,7 +466,7 @@ def show_experiment_selector(context="mlflow"):
     st.markdown("---")
     st.markdown("<p style='text-align: center; color: #888;'>Powered by Streamlit & MLflow</p>", unsafe_allow_html=True)
 
-def Classification():
+def main():
     if "mlflow_initialized" not in st.session_state:
         mlflow_input()
         st.session_state.mlflow_initialized = True
@@ -487,4 +487,4 @@ def Classification():
         
 
 if __name__ == "__main__":
-    Classification()
+    main()

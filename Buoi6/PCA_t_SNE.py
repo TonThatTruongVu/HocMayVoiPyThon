@@ -106,30 +106,30 @@ def explain_pca():
          $$ \\mu = \\frac{1}{n} \\sum_{i=1}^{n} x_i $$  
        - Dịch chuyển dữ liệu về gốc tọa độ:  
          $$ X_{\\text{norm}} = X - \\mu $$  
-       - **Mục đích**: Đảm bảo trung tâm dữ liệu nằm tại (0, 0), giúp phân tích không bị lệch.
+       - **Mục đích**: Đảm bảo trung tâm dữ liệu nằm tại $(0, 0)$, giúp phân tích không bị lệch.
 
     2. **Tính ma trận hiệp phương sai**  
        - Công thức:  
          $$ C = \\frac{1}{n-1} X_{\\text{norm}}^T X_{\\text{norm}} $$  
        - **Ý nghĩa**:  
-         - \( C_{ii} \) (đường chéo): Phương sai của chiều \( i \).  
-         - \( C_{ij} \) (ngoài đường chéo): Hiệp phương sai giữa chiều \( i \) và \( j \), đo mức độ tương quan.
+         - $C_{ii}$ (đường chéo): Phương sai của chiều $i$.  
+         - $C_{ij}$ (ngoài đường chéo): Hiệp phương sai giữa chiều $i$ và $j$, đo mức độ tương quan.
 
     3. **Tìm trị riêng và vector riêng**  
        - Giải phương trình:  
          $$ C v = \\lambda v $$  
        - Trong đó:  
-         - \( \\lambda \): Trị riêng, biểu thị độ lớn phương sai theo hướng tương ứng.  
-         - \( v \): Vector riêng, biểu thị hướng của thành phần chính.
+         - $\\lambda$: Trị riêng, biểu thị độ lớn phương sai theo hướng tương ứng.  
+         - $v$: Vector riêng, biểu thị hướng của thành phần chính.
 
     4. **Chọn thành phần chính**  
-       - Sắp xếp các trị riêng từ lớn đến nhỏ, chọn \( k \) trị riêng lớn nhất và vector riêng tương ứng để tạo ma trận \( U_k \):  
+       - Sắp xếp các trị riêng từ lớn đến nhỏ, chọn $k$ trị riêng lớn nhất và vector riêng tương ứng để tạo ma trận $U_k$:  
          $$ U_k = [v_1, v_2, ..., v_k] $$
 
     5. **Chiếu dữ liệu lên không gian mới**  
        - Công thức:  
          $$ X_{\\text{new}} = X_{\\text{norm}} U_k $$  
-       - Kết quả là dữ liệu mới với số chiều giảm xuống \( k \).
+       - Kết quả là dữ liệu mới với số chiều giảm xuống $k$.
     """)
 
     X_centered = X - np.mean(X, axis=0)
@@ -163,8 +163,7 @@ def explain_pca():
     - Các thành phần chính không còn ý nghĩa trực quan như đặc trưng gốc.
     - Nhạy cảm với dữ liệu chưa chuẩn hóa (cần scale trước nếu các chiều có đơn vị khác nhau).
     """)
-
-# Hàm giải thích t-SNE
+    
 def explain_tsne():
     st.markdown("## 🌌 t-SNE - Giảm chiều Phi tuyến")
 
@@ -172,6 +171,17 @@ def explain_tsne():
     **t-SNE (t-Distributed Stochastic Neighbor Embedding)** là một kỹ thuật giảm chiều phi tuyến, tập trung vào việc bảo toàn cấu trúc cục bộ của dữ liệu (khoảng cách giữa các điểm gần nhau).  
     - **Mục tiêu**: Chuyển dữ liệu từ không gian cao chiều (ví dụ: 784 chiều của MNIST) xuống 2D hoặc 3D để trực quan hóa.
     - **Ứng dụng**: Chủ yếu dùng để khám phá và hiển thị dữ liệu phức tạp.
+    """)
+
+    st.markdown("### 🔹 **Tham số quan trọng trong t-SNE**")
+    st.markdown("""
+    - **`n_components`**:  
+      - **Ý nghĩa**: Số chiều mà dữ liệu sẽ được giảm xuống (thường là 2 hoặc 3 để trực quan hóa).  
+      - **Giá trị**: Một số nguyên dương (ví dụ: 2 cho 2D, 3 cho 3D).  
+      - **Tác động**:  
+        - 2 hoặc 3: Phù hợp để vẽ biểu đồ trực quan.  
+        - Không hỗ trợ giá trị lớn hơn vì t-SNE chủ yếu dùng cho trực quan hóa.  
+      - **Trong code này**: Bạn chọn từ 1 đến 3 để hiển thị dữ liệu dưới dạng 1D, 2D, hoặc 3D.
     """)
 
     st.markdown("### 🔹 **t-SNE hoạt động như thế nào?**")
@@ -198,26 +208,20 @@ def explain_tsne():
     st.markdown("### 🔹 **Các bước thực hiện t-SNE**")
     st.markdown("""
     1. **Tính xác suất tương đồng trong không gian gốc**  
-       - Với mỗi cặp điểm \( x_i \) và \( x_j \), tính xác suất \( p_{j|i} \) rằng \( x_j \) là hàng xóm của \( x_i \):  
+       - Với mỗi cặp điểm $x_i$ và $x_j$, tính xác suất $p_{j|i}$ rằng $x_j$ là hàng xóm của $x_i$:  
          $$ p_{j|i} = \\frac{\\exp(-\\| x_i - x_j \\|^2 / 2\\sigma^2)}{\\sum_{k \\neq i} \\exp(-\\| x_i - x_k \\|^2 / 2\\sigma^2)} $$  
-       - \( \\sigma \): Độ rộng của phân phối Gaussian, phụ thuộc vào tham số **perplexity**.  
+       - $\\sigma$: Độ rộng của phân phối Gaussian, phụ thuộc vào số lượng hàng xóm được xem xét.  
        - **Ý nghĩa**: Các điểm gần nhau có xác suất lớn hơn.
 
     2. **Tính xác suất trong không gian mới**  
-       - Trong không gian giảm chiều, dùng phân phối t-Student để tính \( q_{j|i} \):  
+       - Trong không gian giảm chiều, dùng phân phối t-Student để tính $q_{j|i}$:  
          $$ q_{j|i} = \\frac{(1 + \\| y_i - y_j \\|^2)^{-1}}{\\sum_{k \\neq i} (1 + \\| y_i - y_k \\|^2)^{-1}} $$  
        - **Ý nghĩa**: Phân phối t-Student có đuôi dài, giúp phân bố các điểm xa nhau hợp lý hơn.
 
     3. **Tối ưu hóa sự khác biệt**  
-       - Đo sự khác biệt giữa \( P \) và \( Q \) bằng **KL-divergence**:  
+       - Đo sự khác biệt giữa $P$ và $Q$ bằng **KL-divergence**:  
          $$ KL(P||Q) = \\sum_{i \\neq j} p_{ij} \\log \\frac{p_{ij}}{q_{ij}} $$  
-       - Dùng gradient descent để điều chỉnh tọa độ \( y_i \) sao cho \( KL \) nhỏ nhất.
-    """)
-
-    st.markdown("""
-    **Ghi chú**:  
-    - **Perplexity**: Quyết định số lượng hàng xóm được xem xét (thường 5-50).  
-    - t-SNE không bảo toàn khoảng cách toàn cục, mà ưu tiên cấu trúc cục bộ (các cụm gần nhau).
+       - Dùng gradient descent để điều chỉnh tọa độ $y_i$ sao cho $KL$ nhỏ nhất.
     """)
 
     st.markdown("### ✅ **Ưu điểm của t-SNE**")
@@ -230,7 +234,7 @@ def explain_tsne():
     st.markdown("### ❌ **Nhược điểm của t-SNE**")
     st.markdown("""
     - Tốn nhiều thời gian tính toán, đặc biệt với dữ liệu lớn.
-    - Nhạy cảm với tham số **perplexity** (chọn sai có thể làm méo mó kết quả).
+    - Nhạy cảm với cách thiết lập ban đầu (cần chọn cẩn thận).
     - Không bảo toàn cấu trúc toàn cục, chỉ tập trung vào cục bộ.
     - Không phù hợp để giảm chiều cho học máy (chỉ dùng để trực quan hóa).
     """)
@@ -260,6 +264,14 @@ def dimensionality_reduction():
             return
 
         with st.spinner(f"Đang thực hiện {method}..."):
+            # Khởi tạo thanh trạng thái
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+
+            # Cập nhật trạng thái: Bắt đầu
+            status_text.text("Bắt đầu quá trình giảm chiều...")
+            progress_bar.progress(0.1)
+
             input_mlflow()
             with mlflow.start_run(run_name=run_name):
                 mlflow.log_param("method", method)
@@ -268,20 +280,39 @@ def dimensionality_reduction():
                 mlflow.log_param("original_dim", X.shape[1])
 
                 start_time = time.time()
+
                 if method == "PCA":
+                    # Giai đoạn 1: Khởi tạo PCA
+                    status_text.text("Khởi tạo PCA...")
                     reducer = PCA(n_components=n_components)
+                    progress_bar.progress(0.3)
+
+                    # Giai đoạn 2: Fit và transform dữ liệu
+                    status_text.text("Đang giảm chiều dữ liệu với PCA...")
                     X_reduced = reducer.fit_transform(X_subset)
+                    progress_bar.progress(0.7)
+
                     if n_components > 1:
                         explained_variance = np.sum(reducer.explained_variance_ratio_)
                         mlflow.log_metric("explained_variance_ratio", explained_variance)
                 else:
+                    # Giai đoạn 1: Khởi tạo t-SNE
+                    status_text.text("Khởi tạo t-SNE...")
                     perplexity = min(30, num_samples - 1)
                     mlflow.log_param("perplexity", perplexity)
                     reducer = TSNE(n_components=n_components, perplexity=perplexity, random_state=42)
+                    progress_bar.progress(0.3)
+
+                    # Giai đoạn 2: Fit và transform dữ liệu
+                    status_text.text("Đang giảm chiều dữ liệu với t-SNE (có thể lâu hơn PCA)...")
                     X_reduced = reducer.fit_transform(X_subset)
+                    progress_bar.progress(0.7)
+
                     if hasattr(reducer, "kl_divergence_"):
                         mlflow.log_metric("KL_divergence", reducer.kl_divergence_)
 
+                # Giai đoạn 3: Trực quan hóa
+                status_text.text("Đang tạo biểu đồ trực quan...")
                 elapsed_time = time.time() - start_time
                 mlflow.log_metric("elapsed_time", elapsed_time)
 
@@ -299,7 +330,10 @@ def dimensionality_reduction():
                                         title=f"{method} giảm chiều xuống 3D",
                                         labels={'x': "Thành phần 1", 'y': "Thành phần 2", 'z': "Thành phần 3"})
                 st.plotly_chart(fig)
+                progress_bar.progress(0.9)
 
+                # Giai đoạn 4: Lưu dữ liệu và hoàn tất
+                status_text.text("Đang lưu dữ liệu và hoàn tất...")
                 os.makedirs("logs", exist_ok=True)
                 reduced_data_path = f"logs/{method}_{n_components}D_X_reduced.npy"
                 np.save(reduced_data_path, X_reduced)
@@ -307,6 +341,9 @@ def dimensionality_reduction():
 
                 # Lưu run_name vào session_state để dùng trong tab MLflow
                 st.session_state["last_run_name"] = run_name
+
+                progress_bar.progress(1.0)
+                status_text.text("Hoàn thành!")
 
                 st.success(f"✅ Hoàn thành {method} trong {elapsed_time:.2f} giây!")
                 st.markdown(f"🔗 [Xem kết quả trên MLflow]({st.session_state['mlflow_url']})")

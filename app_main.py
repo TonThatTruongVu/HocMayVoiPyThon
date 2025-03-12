@@ -30,6 +30,8 @@ st.markdown(
             <li>➡️ <strong style='color: #FF6F61;'>MNIST Classification</strong>: Phân loại chữ số viết tay.</li>
             <li>➡️ <strong style='color: #FF6F61;'>Clustering Algorithms</strong>: Các thuật toán phân cụm.</li>
             <li>➡️ <strong style='color: #FF6F61;'>Assignment - PCA & t-SNE MNIST</strong>: Các kỹ thuật giảm chiều dữ liệu trên tập MNIST.</li>
+            <li>➡️ <strong style='color: #FF6F61;'>NeuralNetwork_MNIST</strong>: .</li>
+
         </ul>
     </div>
     """,

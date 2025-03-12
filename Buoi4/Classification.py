@@ -76,21 +76,25 @@ def split_data():
     if st.button("✅ Xác nhận & Lưu") and not st.session_state.data_split_done:
         st.session_state.data_split_done = True
         
-        X_selected, _, y_selected, _ = train_test_split(
-            X, y, train_size=num_samples, stratify=y, random_state=42
-        )
+        # Step 1: Select a subset of num_samples from the full dataset
+        indices = np.random.choice(total_samples, num_samples, replace=False)
+        X_selected = X[indices]
+        y_selected = y[indices]
 
+        # Step 2: Split the selected subset into train+val and test
         stratify_option = y_selected if len(np.unique(y_selected)) > 1 else None
         X_train_full, X_test, y_train_full, y_test = train_test_split(
             X_selected, y_selected, test_size=test_size/100, stratify=stratify_option, random_state=42
         )
 
+        # Step 3: Split the train_full into train and validation
         stratify_option = y_train_full if len(np.unique(y_train_full)) > 1 else None
         X_train, X_val, y_train, y_val = train_test_split(
             X_train_full, y_train_full, test_size=val_size / (100 - test_size),
             stratify=stratify_option, random_state=42
         )
 
+        # Store the split data in session state
         st.session_state.total_samples = num_samples
         st.session_state.X_train = X_train
         st.session_state.X_val = X_val
@@ -135,29 +139,56 @@ def train():
 
     if model_choice == "Decision Tree":
         st.markdown("""
-        - **🌳 Decision Tree** giúp chia dữ liệu thành các nhóm bằng cách đặt câu hỏi nhị phân dựa trên đặc trưng.
-        - **Tham số:** max_depth (Giới hạn độ sâu tối đa của cây).
+        ### 🌳 Decision Tree (Cây Quyết Định)
+        - **Decision Tree** giúp chia dữ liệu thành các nhóm bằng cách đặt câu hỏi nhị phân dựa trên đặc trưng.
+        - **Tiêu chí chia nhánh**:
+          - **Gini Index**: Đo xác suất chọn nhầm nhãn nếu lấy ngẫu nhiên một điểm trong nhóm.
+            - Gini = 0: Nhóm chỉ chứa một loại nhãn.
+            - Gini cao: Nhóm chứa nhiều nhãn khác nhau.
+          - **Entropy**: 
+            - **Entropy** đo mức độ hỗn loạn của nhóm, cao khi nhóm chứa nhiều nhãn khác nhau.
+        - **Tham số quan trọng**:
+          - `max_depth`: Giới hạn độ sâu tối đa của cây để tránh overfitting.
+          - `criterion`: Chọn tiêu chí chia nhánh (Gini hoặc Entropy).
         """)
-        max_depth = st.slider("max_depth", 1, 20, 5)
-        model = DecisionTreeClassifier(max_depth=max_depth)
+        
+        max_depth = st.slider("max_depth (Độ sâu tối đa)", 1, 20, 5)
+        criterion = st.selectbox("Criterion (Tiêu chí chia)", ["gini", "entropy"], 
+                                 help="Chọn 'gini' để giảm phân loại sai, hoặc 'entropy' để nhóm dễ đoán hơn.")
+        
+        model = DecisionTreeClassifier(
+            max_depth=max_depth,
+            criterion=criterion,
+            random_state=42
+        )
 
     elif model_choice == "SVM":
         st.markdown("""
-        - **🛠️ SVM** tìm siêu phẳng tốt nhất để phân tách dữ liệu.
-        - **Tham số:**
-          - **C**: Điều chỉnh mức độ chấp nhận lỗi (lớn hơn thì ít lỗi hơn nhưng dễ overfitting).
-          - **Kernel**: Quyết định cách dữ liệu được ánh xạ để phân tách.
+        ### 🛠️ Support Vector Machine (SVM)
+        - **SVM** tìm siêu phẳng tối ưu để phân tách dữ liệu theo cách tốt nhất.
+        - **Tham số quan trọng**:
+          - **C (Regularization)**: Điều chỉnh mức độ chấp nhận lỗi.
+            - C nhỏ: Cho phép một số điểm bị phân loại sai → tránh overfitting.
+            - C lớn: Giảm lỗi tối đa nhưng dễ bị overfitting.
+          - **Kernel**: Cách ánh xạ dữ liệu để tìm ranh giới phân tách.
         """)
+
         C = st.slider("C (Regularization)", 0.1, 10.0, 1.0)
         kernel = st.selectbox("Kernel", ["linear", "rbf", "poly", "sigmoid"])
-        st.write("""
-        **Giải thích các loại Kernel:**
-        - **Linear**: Phân tách dữ liệu bằng một đường thẳng (hoặc siêu phẳng trong không gian cao hơn). Phù hợp khi dữ liệu có thể phân tách tuyến tính.
+
+        st.markdown("""
+        **🔍 Giải thích các loại Kernel:**
+        - **Linear**: Phân tách dữ liệu bằng một đường thẳng (hoặc siêu phẳng trong không gian cao hơn). Tốt khi dữ liệu có thể phân tách tuyến tính.
         - **RBF (Radial Basis Function)**: Dùng hàm Gaussian để ánh xạ dữ liệu, phù hợp với dữ liệu phi tuyến tính phức tạp. Đây là lựa chọn mặc định phổ biến.
         - **Poly (Polynomial)**: Sử dụng hàm đa thức để ánh xạ dữ liệu, hữu ích khi quan hệ giữa các đặc trưng có dạng đa thức.
-        - **Sigmoid**: Dựa trên hàm sigmoid, tương tự mạng nơ-ron, nhưng ít được dùng vì hiệu suất thường không cao bằng RBF.
+        - **Sigmoid**: Dựa trên hàm sigmoid, tương tự mạng nơ-ron, nhưng thường ít hiệu quả hơn RBF.
         """)
-        model = SVC(C=C, kernel=kernel)
+
+        if kernel == "poly":
+            degree = st.slider("Degree (Bậc đa thức)", 2, 5, 3)
+            model = SVC(C=C, kernel=kernel, degree=degree, random_state=42)
+        else:
+            model = SVC(C=C, kernel=kernel, random_state=42)
 
     n_folds = st.slider("Chọn số folds (KFold Cross-Validation):", min_value=2, max_value=10, value=5)
     run_name = st.text_input("🔹 Nhập tên Run:", "Default_Run")
@@ -184,18 +215,22 @@ def train():
             mlflow.log_param("model", model_choice)
             if model_choice == "Decision Tree":
                 mlflow.log_param("max_depth", max_depth)
+                mlflow.log_param("criterion", criterion)
             elif model_choice == "SVM":
                 mlflow.log_param("C", C)
                 mlflow.log_param("kernel", kernel)
+                if kernel == "poly":
+                    mlflow.log_param("degree", degree)
             mlflow.log_param("n_folds", n_folds)
 
-            st.write("⏳ Đang huấn luyện mô hình...")
+            st.write("⏳ Đang đánh giá và huấn luyện mô hình...")
             progress_bar = st.progress(0)
             total_steps = n_folds + 1
             step_progress = 1.0 / total_steps
 
             try:
-                st.write("🔄 Đang chạy Cross-Validation...")
+                # Đánh giá bằng Cross-Validation
+                st.write("🔍 Đánh giá mô hình qua Cross-Validation...")
                 cv_scores = cross_val_score(model, X_train, y_train, cv=n_folds)
                 for i in range(n_folds):
                     progress_bar.progress((i + 1) * step_progress)
@@ -205,18 +240,14 @@ def train():
                 mean_cv_score = cv_scores.mean()
                 std_cv_score = cv_scores.std()
 
-
-                st.write("🏋️ Đang huấn luyện mô hình trên toàn bộ tập train...")
-                model.fit(X_train, y_train)
+                # Huấn luyện mô hình cuối cùng
+                model.fit(X_train, y_train)  # Không cần in thông báo riêng
                 progress_bar.progress(1.0)
 
                 y_pred = model.predict(X_test)
                 test_accuracy = accuracy_score(y_test, y_pred)
 
-
-
-
-
+   
    
                 mlflow.log_metric("cv_accuracy_mean", mean_cv_score)
                 mlflow.log_metric("cv_accuracy_std", std_cv_score)

@@ -291,7 +291,7 @@ def dimensionality_reduction():
                     status_text.text("Đang giảm chiều dữ liệu với PCA...")
                     X_reduced = reducer.fit_transform(X_subset)
                     progress_bar.progress(0.7)
-
+                    #explained_variance_ratio là Phương sai 
                     if n_components > 1:
                         explained_variance = np.sum(reducer.explained_variance_ratio_)
                         mlflow.log_metric("explained_variance_ratio", explained_variance)
@@ -307,7 +307,8 @@ def dimensionality_reduction():
                     status_text.text("Đang giảm chiều dữ liệu với t-SNE (có thể lâu hơn PCA)...")
                     X_reduced = reducer.fit_transform(X_subset)
                     progress_bar.progress(0.7)
-
+                    #kl_divergence là một thước đo sự khác biệt giữa hai phân phối xác suất, được sử dụng trong t-SNE để tối ưu hóa việc giảm chiều
+                    #là một thước đo sự khác biệt giữa hai phân phối xác suất, được sử dụng trong t-SNE để tối ưu hóa việc giảm chiều
                     if hasattr(reducer, "kl_divergence_"):
                         mlflow.log_metric("KL_divergence", reducer.kl_divergence_)
 

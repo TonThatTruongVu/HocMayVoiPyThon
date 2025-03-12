@@ -289,44 +289,28 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 def chuan_hoa_du_lieu(df):
     st.subheader("📊 Chuẩn hóa dữ liệu")
-
-    # Lọc tất cả các cột số
+ 
     numerical_cols = df.select_dtypes(include=['number']).columns.tolist()
-
-    # Tìm các cột nhị phân (chỉ chứa 0 và 1)
+  
     binary_cols = [col for col in numerical_cols if df[col].dropna().isin([0, 1]).all()]
-
-    # Loại bỏ cột nhị phân khỏi danh sách cần chuẩn hóa
+  
     cols_to_scale = list(set(numerical_cols) - set(binary_cols))
-
+ 
     if not cols_to_scale:
         st.success("✅ Không có thuộc tính dạng số cần chuẩn hóa!")
         return df
-
-    # Tách cột 'Age' để xử lý riêng (nếu có)
-    age_col = 'Age' if 'Age' in cols_to_scale else None
-    other_cols_to_scale = [col for col in cols_to_scale if col != 'Age']
-
+ 
     if st.button("🚀 Thực hiện Chuẩn hóa"):
-        # Chuẩn hóa các cột khác (ngoại trừ Age) bằng StandardScaler
-        if other_cols_to_scale:
-            scaler = StandardScaler()
-            df[other_cols_to_scale] = scaler.fit_transform(df[other_cols_to_scale])
-            st.success(f"✅ Đã chuẩn hóa các cột số bằng StandardScaler: {', '.join(other_cols_to_scale)}")
-
-        # Chuẩn hóa riêng cột Age bằng MinMaxScaler
-        if age_col:
-            minmax_scaler = MinMaxScaler()
-            df[age_col] = minmax_scaler.fit_transform(df[[age_col]])  # Dùng [[age_col]] để giữ dạng DataFrame
-            st.success(f"✅ Đã chuẩn hóa cột 'Age' bằng MinMaxScaler (giá trị trong [0, 1])")
-
-        # Lưu vào session_state
+        scaler = StandardScaler()
+        df[cols_to_scale] = scaler.fit_transform(df[cols_to_scale])
+        st.success(f"✅ Đã chuẩn hóa các cột số bằng StandardScaler: {', '.join(cols_to_scale)}")
+     
+   
         st.session_state.df = df
-
-
+   
         st.info(f"🚫 Giữ nguyên các cột nhị phân: {', '.join(binary_cols) if binary_cols else 'Không có'}")
         st.dataframe(df.head())
-
+   
     return df
 
 def hien_thi_ly_thuyet(df):
@@ -687,20 +671,20 @@ def test():
         mapping_dict = None
         for column_info in st.session_state.mapping_dicts:
             if column_info["column_name"] == column_name:
-       
+   
                 mapping_dict = column_info["mapping_dict"]
-     
+  
                 break
 
         if mapping_dict:  # Nếu có mapping_dict, hiển thị dropdown với các giá trị thay thế
-       
+   
             value = st.selectbox(f"Giá trị cột {column_name}", options=list(mapping_dict.keys()), key=f"column_{i}")
     
             value = int(mapping_dict[value])
-       
+   
         else:  # Nếu không có mapping_dict, yêu cầu người dùng nhập số
             value = st.number_input(f"Giá trị cột {column_name}", key=f"column_{i}")
-            
+   
         X_train_input.append(value)
     
     # Chuyển đổi list thành array
@@ -714,33 +698,34 @@ def test():
         if X_train_input[0, i] != 0 and X_train_input[0, i] != 1:  # Nếu giá trị không phải 0 hoặc 1
             X_train_input_final[0, i] = scaler.fit_transform(X_train_input[:, i].reshape(-1, 1)).flatten()
     
-   
-    st.write("Dữ liệu sau khi xử lý:", X_train_input_final)
+  
+    #st.write("Dữ liệu sau khi xử lý:", X_train_input_final)
 
     if st.button("Dự đoán"):
         # Thêm cột 1 cho intercept (nếu cần)
         X_input_b = np.c_[np.ones((X_train_input_final.shape[0], 1)), X_train_input_final]
         
-     
+    
         # Dự đoán với mô hình đã lưu
-     
+    
         y_pred = X_input_b.dot(model)  # Dự đoán với mô hình đã lưu
         
         # Chuyển y_pred thành xác suất bằng sigmoid (vì đây là phân loại nhị phân)
         y_pred_prob = 1 / (1 + np.exp(-y_pred))  # Áp dụng sigmoid để có giá trị [0, 1]
         y_pred_scalar = y_pred_prob[0, 0]  # Lấy giá trị đơn từ mảng 2D
 
-        # Xác định nhãn dự đoán và độ tin cậy
+        # Xác định nhãn dự đoán
         if y_pred_scalar >= 0.5:
+  
             prediction = "SỐNG"
-            confidence = y_pred_scalar * 100  # Độ tin cậy là xác suất dự đoán (%)
+   
         else:
             prediction = "CHẾT"
-            confidence = (1 - y_pred_scalar) * 100  # Độ tin cậy là 1 - xác suất dự đoán (%)
 
-        # Hiển thị kết quả dự đoán và độ tin cậy
+
+        # Hiển thị kết quả dự đoán (không hiển thị độ tin cậy)
         st.write(f"**Kết quả dự đoán:** {prediction}")
-        st.write(f"**Độ tin cậy:** {confidence:.2f}%")
+
 
         # Gọi hàm hiển thị thông tin experiment (nếu có)
         show_experiment_selector()

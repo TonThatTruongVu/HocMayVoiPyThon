@@ -242,7 +242,7 @@ def train():
     """)
 
     hidden_size = st.slider("Số nơ-ron lớp ẩn:", 50, 200, 100, step=10)
-    max_iter = st.slider("Số lần lặp tối đa:", 50, 300, 100, step=50)
+    max_iter = st.slider("Số lần lặp tối đa:", 50, 200, 100, step=25)  # Giảm max để tối ưu
     
     # Khởi tạo giá trị mặc định trong session_state nếu chưa có
     if "learning_rate_init" not in st.session_state:
@@ -253,15 +253,15 @@ def train():
         "Tốc độ học ban đầu:", 
         min_value=0.001, 
         max_value=0.7, 
-        value=st.session_state.learning_rate_init,  # Lấy giá trị từ session_state
+        value=st.session_state.learning_rate_init,
         step=0.0001, 
-        format="%.4f",  # Hiển thị 4 chữ số thập phân
-        key="learning_rate_input"  # Key duy nhất để quản lý trạng thái
+        format="%.4f",
+        key="learning_rate_input"
     )
-    # Cập nhật giá trị vào session_state khi người dùng thay đổi
+   
     st.session_state.learning_rate_init = learning_rate_init
 
-    n_folds = st.slider("Chọn số folds (KFold Cross-Validation):", min_value=2, max_value=10, value=5)
+    n_folds = 3  # Cố định 3 folds để giảm tải (ẩn slider)
     run_name = st.text_input("🔹 Nhập tên Run:", "Default_NN_Run")
     st.session_state["run_name"] = run_name if run_name else "Default_NN_Run"
 
@@ -269,21 +269,28 @@ def train():
         st.session_state.training_results = None
 
     if st.button("Huấn luyện mô hình"):
-        with mlflow.start_run(run_name=f"NN_{st.session_state['run_name']}") as run:
-            st.write(f"Debug: Run Name trong MLflow: {run.info.run_name}")
+        # Kiểm tra xem có chạy trên Streamlit Cloud không
+        is_cloud = os.getenv("STREAMLIT_CLOUD", False)
+        if is_cloud:
+            st.warning("⚠️ Chạy trên Streamlit Cloud có thể chậm do hạn chế tài nguyên.")
 
-            mlflow.log_param("total_samples", st.session_state.total_samples)
-            mlflow.log_param("test_size", st.session_state.test_size)
-            mlflow.log_param("validation_size", st.session_state.val_size)
-            mlflow.log_param("train_size", st.session_state.train_size)
-            mlflow.log_param("hidden_layer_sizes", hidden_size)
-            mlflow.log_param("max_iter", max_iter)
-            mlflow.log_param("learning_rate_init", learning_rate_init)
-            mlflow.log_param("n_folds", n_folds)
+        with st.spinner("⏳ Đang khởi tạo huấn luyện..."):
+            # Khởi tạo MLflow (nếu không chạy trên Cloud thì log, nếu Cloud thì bỏ qua artifact)
+            if not is_cloud:
+                with mlflow.start_run(run_name=f"NN_{st.session_state['run_name']}") as run:
+                    st.write(f"Debug: Run Name trong MLflow: {run.info.run_name}")
+                    mlflow.log_param("total_samples", st.session_state.total_samples)
+                    mlflow.log_param("test_size", st.session_state.test_size)
+                    mlflow.log_param("validation_size", st.session_state.val_size)
+                    mlflow.log_param("train_size", st.session_state.train_size)
+                    mlflow.log_param("hidden_layer_sizes", hidden_size)
+                    mlflow.log_param("max_iter", max_iter)
+                    mlflow.log_param("learning_rate_init", learning_rate_init)
+                    mlflow.log_param("n_folds", n_folds)
 
-            st.write("⏳ Đang đánh giá và huấn luyện mô hình...")
+            # Thiết lập progress bar
             progress_bar = st.progress(0)
-            total_steps = n_folds + 1
+            total_steps = n_folds + 1  # n_folds cho Cross-Validation + 1 cho fit cuối
             step_progress = 1.0 / total_steps
 
             try:
@@ -294,29 +301,36 @@ def train():
                     random_state=42
                 )
 
-                st.write("🔍 Đánh giá mô hình qua Cross-Validation...")
+                # Cross-Validation với tiến trình chi tiết
+                st.write(f"🔍 Đánh giá mô hình qua Cross-Validation ({n_folds} folds)...")
                 cv_scores = cross_val_score(model, X_train, y_train, cv=n_folds)
                 fold_results = []
                 for i in range(n_folds):
-                    progress_bar.progress((i + 1) * step_progress)
-                    fold_result = f"📌 Fold {i + 1} - Accuracy: {cv_scores[i]:.4f}"
-                    st.write(fold_result)
-                    fold_results.append(fold_result)
-                    mlflow.log_metric(f"accuracy_fold_{i+1}", cv_scores[i])
+                    current_progress = (i + 1) * step_progress
+                    progress_bar.progress(current_progress)
+                    with st.spinner(f"Đang xử lý Fold {i + 1}/{n_folds} ({current_progress * 100:.1f}%)..."):
+                        fold_result = f"📌 Fold {i + 1} - Accuracy: {cv_scores[i]:.4f}"
+                        st.write(fold_result)
+                        fold_results.append(fold_result)
+                        if not is_cloud:
+                            mlflow.log_metric(f"accuracy_fold_{i+1}", cv_scores[i])
 
                 mean_cv_score = cv_scores.mean()
                 std_cv_score = cv_scores.std()
 
-                model.fit(X_train, y_train)
-                progress_bar.progress(1.0)
+                # Huấn luyện cuối cùng
+                with st.spinner(f"Đang huấn luyện mô hình cuối cùng ({(n_folds * step_progress * 100):.1f}% - 100%)..."):
+                    model.fit(X_train, y_train)
+                    progress_bar.progress(1.0)
+                    y_pred = model.predict(X_test)
+                    test_accuracy = accuracy_score(y_test, y_pred)
 
-                y_pred = model.predict(X_test)
-                test_accuracy = accuracy_score(y_test, y_pred)
-
-                mlflow.log_metric("cv_accuracy_mean", mean_cv_score)
-                mlflow.log_metric("cv_accuracy_std", std_cv_score)
-                mlflow.log_metric("test_accuracy", test_accuracy)
-                mlflow.sklearn.log_model(model, "neural_network")
+                # Log kết quả vào MLflow nếu không chạy trên Cloud
+                if not is_cloud:
+                    mlflow.log_metric("cv_accuracy_mean", mean_cv_score)
+                    mlflow.log_metric("cv_accuracy_std", std_cv_score)
+                    mlflow.log_metric("test_accuracy", test_accuracy)
+                    mlflow.sklearn.log_model(model, "neural_network")
 
                 st.session_state.training_results = {
                     "cv_scores": fold_results,
@@ -330,12 +344,13 @@ def train():
 
             except Exception as e:
                 error_message = str(e)
-                mlflow.log_param("status", "failed")
-                mlflow.log_metric("cv_accuracy_mean", -1)
-                mlflow.log_metric("cv_accuracy_std", -1)
-                mlflow.log_metric("test_accuracy", -1)
-                mlflow.log_param("error_message", error_message)
-
+                if not is_cloud:
+                    mlflow.log_param("status", "failed")
+                    mlflow.log_metric("cv_accuracy_mean", -1)
+                    mlflow.log_metric("cv_accuracy_std", -1)
+                    mlflow.log_metric("test_accuracy", -1)
+                    mlflow.log_param("error_message", error_message)
+                
                 st.session_state.training_results = {
                     "error_message": error_message,
                     "run_name": f"NN_{st.session_state['run_name']}",
@@ -351,11 +366,13 @@ def train():
                 st.write(fold_result)
             st.success(f"📊 Cross-Validation Accuracy trung bình: {st.session_state.training_results['cv_accuracy_mean']:.4f} (±{st.session_state.training_results['cv_accuracy_std']:.4f})")
             st.success(f"✅ Độ chính xác trên test set: {st.session_state.training_results['test_accuracy']:.4f}")
-            st.success(f"✅ Đã log dữ liệu cho **{st.session_state.training_results['run_name']}**!")
-            st.markdown(f"🔗 [Truy cập MLflow UI]({st.session_state['mlflow_url']})")
+            st.success(f"✅ Huấn luyện hoàn tất cho **{st.session_state.training_results['run_name']}**!")
+            if not os.getenv("STREAMLIT_CLOUD"):
+                st.markdown(f"🔗 [Truy cập MLflow UI]({st.session_state['mlflow_url']})")
         else:
             st.error(f"❌ Lỗi khi huấn luyện mô hình: {st.session_state.training_results['error_message']}")
-            st.markdown(f"🔗 [Truy cập MLflow UI]({st.session_state['mlflow_url']})")
+            if not os.getenv("STREAMLIT_CLOUD"):
+                st.markdown(f"🔗 [Truy cập MLflow UI]({st.session_state['mlflow_url']})")
 # Tab dự đoán
 def du_doan():
     st.header("✍️ Dự đoán số viết tay")

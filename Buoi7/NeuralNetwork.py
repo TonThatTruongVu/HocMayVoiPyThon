@@ -109,9 +109,9 @@ def explain_nn():
     st.subheader("3. Mô hình Neural Network")
     st.markdown("""
     Một mô hình neural network cơ bản bao gồm:
-    - **Tầng đầu vào (Input Layer)**: Chứa dữ liệu đầu vào (ví dụ: 784 pixel của MNIST).
+    - **Tầng đầu vào (Input Layer)**: Chứa dữ liệu đầu vào .
     - **Tầng ẩn (Hidden Layers)**: Xử lý dữ liệu qua các nơ-ron với hàm kích hoạt.
-    - **Tầng đầu ra (Output Layer)**: Đưa ra kết quả dự đoán (ví dụ: 10 lớp cho MNIST).
+    - **Tầng đầu ra (Output Layer)**: Đưa ra kết quả dự đoán .
     """)
     st.image("https://i0.wp.com/nttuan8.com/wp-content/uploads/2019/03/nn-1.png?resize=768%2C631&ssl=1", 
              caption="Cấu trúc mô hình neural network (Nguồn: nttuan8.com)", 
@@ -135,7 +135,7 @@ def explain_nn():
     st.subheader("6. Kí hiệu")
     st.markdown("""
     Các kí hiệu cơ bản trong neural network:
-    - $X$: Vector đầu vào (ví dụ: $X = [x_1, x_2, ..., x_n]$ với $n=784$ cho MNIST).
+    - $X$: Vector đầu vào .
     - $W$: Ma trận trọng số (weights), ví dụ $W^{[1]}$ cho tầng 1.
     - $b$: Vector độ lệch (bias).
     - $z$: Tổng trọng số, $z = W \\cdot X + b$.

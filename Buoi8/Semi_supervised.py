@@ -505,43 +505,43 @@ def train():
                     "status": "failed"
                 }
 
-    # # Hiển thị lại kết quả và thông tin từ session_state
-    # if st.session_state.training_results:
-    #     st.subheader("📊 Kết quả huấn luyện")
-    #     if st.session_state.training_results["status"] == "success":
-    #         st.write(f"✅ Độ chính xác Validation cuối cùng: {st.session_state.training_results['final_val_accuracy']:.4f}")
-    #         st.write(f"✅ Độ chính xác Test cuối cùng: {st.session_state.test_accuracy:.4f}")
-    #         st.success(f"✅ Đã log dữ liệu cho **{st.session_state.training_results['run_name']}**!")
+    # Hiển thị lại kết quả và thông tin từ session_state
+    if st.session_state.training_results:
+        st.subheader("📊 Kết quả huấn luyện")
+        if st.session_state.training_results["status"] == "success":
+            st.write(f"✅ Độ chính xác Validation cuối cùng: {st.session_state.training_results['final_val_accuracy']:.4f}")
+            st.write(f"✅ Độ chính xác Test cuối cùng: {st.session_state.test_accuracy:.4f}")
+            st.success(f"✅ Đã log dữ liệu cho **{st.session_state.training_results['run_name']}**!")
 
-    #         # Hiển thị lại thông tin và 5 ảnh ví dụ của từng vòng lặp
-    #         if st.session_state.pseudo_data:
-    #             st.subheader("📸 Thông tin và ảnh nhãn giả từ các vòng lặp")
-    #             for data in st.session_state.pseudo_data:
-    #                 st.write(f"**Vòng lặp {data['vong_lap']}**")
-    #                 st.write(f"📌 Độ chính xác Validation: {data['val_accuracy']:.4f}")
-    #                 st.write(f"📊 Số ảnh đã gán nhãn: {data['labeled_count']}")
-    #                 st.write(f"📊 Số ảnh chưa gán nhãn: {data['unlabeled_count']}")
+            # Hiển thị lại thông tin và 5 ảnh ví dụ của từng vòng lặp
+            if st.session_state.pseudo_data:
+                st.subheader("📸 Thông tin và ảnh nhãn giả từ các vòng lặp")
+                for data in st.session_state.pseudo_data:
+                    st.write(f"**Vòng lặp {data['vong_lap']}**")
+                    st.write(f"📌 Độ chính xác Validation: {data['val_accuracy']:.4f}")
+                    st.write(f"📊 Số ảnh đã gán nhãn: {data['labeled_count']}")
+                    st.write(f"📊 Số ảnh chưa gán nhãn: {data['unlabeled_count']}")
 
-    #                 # Hiển thị lại 5 ảnh ví dụ
-    #                 X_pseudo = data['X_pseudo']
-    #                 y_pseudo = data['y_pseudo']
-    #                 num_examples = min(5, len(X_pseudo))  # Chỉ lấy 5 ảnh
-    #                 fig, axes = plt.subplots(1, 5, figsize=(15, 3))  # 1 hàng, 5 cột
-    #                 example_indices = np.random.choice(len(X_pseudo), num_examples, replace=False)
-    #                 for i, idx in enumerate(example_indices):
-    #                     axes[i].imshow(X_pseudo[idx].reshape(28, 28), cmap='gray')
-    #                     axes[i].set_title(f"Nhãn giả: {y_pseudo[idx]}")
-    #                     axes[i].axis('off')
-    #                 plt.tight_layout()
-    #                 st.pyplot(fig)
+                    # Hiển thị lại 5 ảnh ví dụ
+                    X_pseudo = data['X_pseudo']
+                    y_pseudo = data['y_pseudo']
+                    num_examples = min(5, len(X_pseudo))  # Chỉ lấy 5 ảnh
+                    fig, axes = plt.subplots(1, 5, figsize=(15, 3))  # 1 hàng, 5 cột
+                    example_indices = np.random.choice(len(X_pseudo), num_examples, replace=False)
+                    for i, idx in enumerate(example_indices):
+                        axes[i].imshow(X_pseudo[idx].reshape(28, 28), cmap='gray')
+                        axes[i].set_title(f"Nhãn giả: {y_pseudo[idx]}")
+                        axes[i].axis('off')
+                    plt.tight_layout()
+                    st.pyplot(fig)
 
-    #         # Hiển thị lại ảnh tập test
-    #         if st.session_state.test_images:
-    #             st.subheader("📸 Ví dụ 10 ảnh dự đoán trên tập Test")
-    #             st.pyplot(st.session_state.test_images)
+            # Hiển thị lại ảnh tập test
+            if st.session_state.test_images:
+                st.subheader("📸 Ví dụ 10 ảnh dự đoán trên tập Test")
+                st.pyplot(st.session_state.test_images)
 
-    #     else:
-    #         st.error(f"❌ Lỗi khi huấn luyện mô hình: {st.session_state.training_results['error_message']}")
+        else:
+            st.error(f"❌ Lỗi khi huấn luyện mô hình: {st.session_state.training_results['error_message']}")
 
     # Hiển thị danh sách mô hình đã lưu
     if "models" in st.session_state and st.session_state["models"]:

@@ -282,6 +282,14 @@ def train():
     if "training_results" not in st.session_state:
         st.session_state.training_results = None
 
+    # Khởi tạo biến lưu accuracy và loss nếu chưa có
+    if "fold_accuracies" not in st.session_state:
+        st.session_state.fold_accuracies = []
+    if "fold_losses" not in st.session_state:
+        st.session_state.fold_losses = []
+    if "test_accuracy" not in st.session_state:
+        st.session_state.test_accuracy = None
+
     if st.button("Huấn luyện mô hình", key="train_button"):
         if not run_name:
             st.error("⚠️ Vui lòng nhập tên Run trước khi huấn luyện!")
@@ -309,7 +317,8 @@ def train():
             try:
                 # Cross-validation với KFold
                 kf = StratifiedKFold(n_splits=k_folds, shuffle=True, random_state=42)
-                accuracies, losses = [], []
+                accuracies = []
+                losses = []  # Khởi tạo danh sách losses
                 fold_count = 0
 
                 for train_idx, val_idx in kf.split(X_train, y_train):
@@ -318,10 +327,10 @@ def train():
 
                     # Xây dựng mô hình Keras
                     model = Sequential()
-                    model.add(Input(shape=(X_k_train.shape[1],)))  # Lớp đầu vào
+                    model.add(Input(shape=(X_k_train.shape[1],)))
                     for _ in range(num_layers):
-                        model.add(Dense(num_neurons, activation=activation))  # Các lớp ẩn
-                    model.add(Dense(10, activation="softmax"))  # Lớp đầu ra (10 lớp cho MNIST)
+                        model.add(Dense(num_neurons, activation=activation))
+                    model.add(Dense(10, activation="softmax"))
 
                     # Chọn optimizer
                     if optimizer == "adam":
@@ -331,7 +340,6 @@ def train():
                     else:
                         opt = RMSprop(learning_rate=learning_rate)
 
-                    # Biên dịch mô hình
                     model.compile(optimizer=opt, loss=loss_fn, metrics=["accuracy"])
 
                     # Huấn luyện mô hình
@@ -341,18 +349,21 @@ def train():
                     # Đánh giá trên fold hiện tại
                     val_loss, val_accuracy = model.evaluate(X_k_val, y_k_val, verbose=0)
                     accuracies.append(val_accuracy)
-                    losses.append(val_loss)
+                    losses.append(val_loss)  # Thêm val_loss vào danh sách losses
 
                     fold_count += 1
                     progress_bar.progress(fold_count / k_folds)
-                    st.write(f"📌 Fold {fold_count}/{k_folds} - Accuracy: {val_accuracy:.4f}")
+                    st.write(f"📌 Fold {fold_count}/{k_folds} - Accuracy: {val_accuracy:.4f}, Loss: {val_loss:.4f}")
 
-                # Tính trung bình các fold
+                # Lưu accuracies và losses của các fold
+                st.session_state.fold_accuracies = accuracies
+                st.session_state.fold_losses = losses
                 mean_cv_accuracy = np.mean(accuracies)
-                mean_cv_loss = np.mean(losses)
+                mean_cv_loss = np.mean(losses)  # Tính mean_cv_loss từ losses
 
                 # Đánh giá trên tập test
                 test_loss, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+                st.session_state.test_accuracy = test_accuracy
                 progress_bar.progress(1.0)
 
                 # Log metrics vào MLflow
@@ -361,10 +372,10 @@ def train():
                 mlflow.log_metric("test_accuracy", test_accuracy)
                 mlflow.log_metric("test_loss", test_loss)
 
-                # Lưu mô hình vào MLflow mà không cần input_example
+                # Lưu mô hình vào MLflow
                 mlflow.keras.log_model(model, "neural_network")
 
-                # Lưu kết quả và mô hình vào session_state
+                # Lưu kết quả vào session_state
                 st.session_state.training_results = {
                     "cv_accuracy_mean": mean_cv_accuracy,
                     "cv_loss_mean": mean_cv_loss,
@@ -374,10 +385,9 @@ def train():
                     "status": "success"
                 }
 
-                # Lưu mô hình vào danh sách models trong session_state
+                # Lưu mô hình vào danh sách models
                 if "models" not in st.session_state:
                     st.session_state["models"] = []
-
                 model_name = "neural_network"
                 full_run_name = f"Train_{st.session_state['run_name']}"
                 existing_model = next((item for item in st.session_state["models"] if item["name"] == model_name), None)
@@ -389,7 +399,6 @@ def train():
                         new_model_name = f"{model_name}_{count}"
                     model_name = new_model_name
                     st.warning(f"⚠️ Mô hình được lưu với tên: {model_name}")
-
                 st.session_state["models"].append({
                     "name": model_name,
                     "run_name": full_run_name,
@@ -404,24 +413,25 @@ def train():
                 mlflow.log_metric("test_accuracy", -1)
                 mlflow.log_metric("test_loss", -1)
                 mlflow.log_param("error_message", error_message)
-
                 st.session_state.training_results = {
                     "error_message": error_message,
                     "run_name": f"Train_{st.session_state['run_name']}",
                     "status": "failed"
                 }
 
-            # Hiển thị kết quả
-            if st.session_state.training_results:
-                if st.session_state.training_results["status"] == "success":
-                    st.success(f"📊 Cross-Validation Accuracy trung bình: {st.session_state.training_results['cv_accuracy_mean']:.4f}")
-                    st.success(f"✅ Độ chính xác trên test set: {st.session_state.training_results['test_accuracy']:.4f}")
-                    st.success(f"✅ Đã log dữ liệu cho **{st.session_state.training_results['run_name']}**!")
-                    st.markdown(f"🔗 [Truy cập MLflow UI]({st.session_state['mlflow_url']})")
-                else:
-                    st.error(f"❌ Lỗi khi huấn luyện mô hình: {st.session_state.training_results['error_message']}")
-                    st.warning(f"⚠️ Dữ liệu lỗi đã được log vào MLflow với run name: **{st.session_state.training_results['run_name']}**")
-                    st.markdown(f"🔗 [Truy cập MLflow UI]({st.session_state['mlflow_url']})")
+    # Hiển thị kết quả sau khi huấn luyện (ở ngoài khối if)
+    if "fold_accuracies" in st.session_state and st.session_state.fold_accuracies:
+        st.subheader("📊 Kết quả huấn luyện")
+        for i, (acc, loss) in enumerate(zip(st.session_state.fold_accuracies, st.session_state.fold_losses), 1):
+            st.write(f"📌 Fold {i}/{len(st.session_state.fold_accuracies)} - Accuracy: {acc:.4f}, Loss: {loss:.4f}")
+        if st.session_state.test_accuracy is not None:
+            st.write(f"✅ Test Accuracy: {st.session_state.test_accuracy:.4f}")
+        if st.session_state.training_results and st.session_state.training_results["status"] == "success":
+            st.success(f"📊 Cross-Validation Accuracy trung bình: {st.session_state.training_results['cv_accuracy_mean']:.4f}")
+            st.success(f"✅ Đã log dữ liệu cho **{st.session_state.training_results['run_name']}**!")
+            st.markdown(f"🔗 [Truy cập MLflow UI]({st.session_state['mlflow_url']})")
+        elif st.session_state.training_results and st.session_state.training_results["status"] == "failed":
+            st.error(f"❌ Lỗi khi huấn luyện mô hình: {st.session_state.training_results['error_message']}")
 
     # Hiển thị danh sách mô hình đã lưu
     if "models" in st.session_state and st.session_state["models"]:

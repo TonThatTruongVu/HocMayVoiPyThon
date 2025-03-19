@@ -589,8 +589,8 @@ def show_experiment_selector():
             with col2:
                 # Hiển thị Parameters (11)
                 params = selected_run.data.params
+                st.write("#### ⚙️ Parameters")
                 if params:
-                    st.write("#### ⚙️ Parameters")
                     st.write("- **Total Samples**: ", params.get("total_samples", "N/A"))
                     st.write("- **Test Size**: ", params.get("test_size", "N/A"))
                     st.write("- **Validation Size**: ", params.get("validation_size", "N/A"))
@@ -602,15 +602,19 @@ def show_experiment_selector():
                     st.write("- **Optimizer**: ", params.get("optimizer", "N/A"))
                     st.write("- **Epochs**: ", params.get("epochs", "N/A"))
                     st.write("- **Learning Rate**: ", params.get("learning_rate", "N/A"))
+                else:
+                    st.warning("⚠ Không tìm thấy tham số nào cho run này!")
 
                 # Hiển thị Metrics (4)
                 metrics = selected_run.data.metrics
+                st.write("#### 📊 Metrics")
                 if metrics:
-                    st.write("#### 📊 Metrics")
                     st.write("- **CV Accuracy Mean**: ", f"{metrics.get('cv_accuracy_mean', 'N/A'):.4f}")
                     st.write("- **CV Loss Mean**: ", f"{metrics.get('cv_loss_mean', 'N/A'):.4f}")
                     st.write("- **Test Accuracy**: ", f"{metrics.get('test_accuracy', 'N/A'):.4f}")
                     st.write("- **Test Loss**: ", f"{metrics.get('test_loss', 'N/A'):.4f}")
+                else:
+                    st.warning("⚠ Không tìm thấy chỉ số nào cho run này!")
 
     except Exception as e:
         st.error(f"❌ Lỗi khi truy cập MLflow: {str(e)}")

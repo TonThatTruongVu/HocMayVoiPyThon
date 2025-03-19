@@ -245,23 +245,9 @@ import tensorflow as tf
 from mlflow.models.signature import infer_signature
 import os  # Thêm import này để kiểm tra thư mục
 
-import streamlit as st
-import numpy as np
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Input
-from tensorflow.keras.optimizers import Adam, SGD, RMSprop
-import mlflow
-import mlflow.keras
-from mlflow.models.signature import infer_signature
-import matplotlib.pyplot as plt
 
-import streamlit as st
-import numpy as np
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Input
-from tensorflow.keras.optimizers import Adam, SGD, RMSprop
+
+
 import mlflow
 import mlflow.keras
 from mlflow.models.signature import infer_signature

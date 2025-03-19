@@ -256,6 +256,17 @@ import mlflow.keras
 from mlflow.models.signature import infer_signature
 import matplotlib.pyplot as plt
 
+import streamlit as st
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Input
+from tensorflow.keras.optimizers import Adam, SGD, RMSprop
+import mlflow
+import mlflow.keras
+from mlflow.models.signature import infer_signature
+import matplotlib.pyplot as plt
+
 def train():
     st.header("⚙️ Huấn luyện Neural Network với Pseudo Labelling")
     if "X_labeled" not in st.session_state:
@@ -303,12 +314,16 @@ def train():
     run_name = st.text_input("🔹 Nhập tên Run:", "", key="train_run_name")
     st.session_state["run_name"] = run_name if run_name else "Default_NN_Pseudo_Run"
 
-    # Khởi tạo biến lưu kết quả
+    # Khởi tạo biến lưu kết quả và ảnh trong session_state
     if "training_results" not in st.session_state:
         st.session_state.training_results = None
     if "test_accuracy" not in st.session_state:
         st.session_state.test_accuracy = None
-    
+    if "pseudo_images" not in st.session_state:
+        st.session_state.pseudo_images = []  # Lưu ảnh nhãn giả theo từng vòng lặp
+    if "test_images" not in st.session_state:
+        st.session_state.test_images = None  # Lưu ảnh tập test
+
     if st.button("Huấn luyện mô hình", key="train_button"):
         if not run_name:
             st.error("⚠️ Vui lòng nhập tên Run trước khi huấn luyện!")
@@ -338,6 +353,7 @@ def train():
 
             try:
                 vong_lap = 0
+                st.session_state.pseudo_images = []  # Reset danh sách ảnh nhãn giả
                 while vong_lap < max_iterations and len(X_unlabeled) > 0:
                     st.write(f"🔄 Vòng lặp {vong_lap + 1}")
 
@@ -384,8 +400,8 @@ def train():
                         st.write(f"📊 Số ảnh đã gán nhãn: {len(X_labeled)}")
                         st.write(f"📊 Số ảnh chưa gán nhãn: {len(X_unlabeled)}")
 
-                        # Hiển thị 10 ảnh ví dụ từ X_pseudo
-                        st.subheader("Ví dụ 10 ảnh vừa được gán nhãn giả:")
+                        # Hiển thị và lưu 10 ảnh ví dụ từ X_pseudo
+                        st.subheader(f"Ví dụ 10 ảnh vừa được gán nhãn giả (Vòng {vong_lap + 1}):")
                         num_examples = min(10, len(X_pseudo))
                         fig, axes = plt.subplots(2, 5, figsize=(15, 6))
                         example_indices = np.random.choice(len(X_pseudo), num_examples, replace=False)
@@ -396,6 +412,7 @@ def train():
                             axes[row, col].axis('off')
                         plt.tight_layout()
                         st.pyplot(fig)
+                        st.session_state.pseudo_images.append((fig, f"Vòng {vong_lap + 1}"))
 
                     else:
                         st.write("⚠ Không có mẫu nào vượt ngưỡng, dừng lại.")
@@ -413,7 +430,7 @@ def train():
                 st.session_state.test_accuracy = test_accuracy
                 st.write(f"✅ Độ chính xác trên tập Test: {test_accuracy:.4f}")
 
-                # Hiển thị 10 ảnh ví dụ từ tập Test
+                # Hiển thị và lưu 10 ảnh ví dụ từ tập Test
                 st.subheader("Ví dụ 10 ảnh dự đoán trên tập Test:")
                 test_predictions = model.predict(X_test, verbose=0)
                 test_predicted_labels = np.argmax(test_predictions, axis=1)
@@ -427,14 +444,15 @@ def train():
                     axes[row, col].axis('off')
                 plt.tight_layout()
                 st.pyplot(fig)
+                st.session_state.test_images = fig
 
                 # Log metrics vào MLflow
                 mlflow.log_metric("final_val_accuracy", val_accuracy)
                 mlflow.log_metric("final_test_accuracy", test_accuracy)
                 mlflow.log_metric("final_test_loss", test_loss)
 
-                # Ghi thẳng vào MLflow với signature, không cần input_example
-                input_example = X_test[:1]  # NumPy array
+                # Ghi thẳng vào MLflow với signature
+                input_example = X_test[:1]
                 output_example = model.predict(input_example)
                 signature = infer_signature(input_example, output_example)
                 mlflow.keras.log_model(model, "Neural_Network_Pseudo_Labelling", signature=signature)
@@ -479,14 +497,26 @@ def train():
                     "status": "failed"
                 }
 
-    # Hiển thị kết quả sau khi huấn luyện
+    # Hiển thị lại kết quả và ảnh từ session_state
     if st.session_state.training_results:
         st.subheader("📊 Kết quả huấn luyện")
         if st.session_state.training_results["status"] == "success":
             st.write(f"✅ Độ chính xác Validation cuối cùng: {st.session_state.training_results['final_val_accuracy']:.4f}")
             st.write(f"✅ Độ chính xác Test cuối cùng: {st.session_state.test_accuracy:.4f}")
             st.success(f"✅ Đã log dữ liệu cho **{st.session_state.training_results['run_name']}**!")
-            st.markdown(f"🔗 [Truy cập MLflow UI]({st.session_state['mlflow_url']})")
+
+            # Hiển thị lại ảnh nhãn giả của từng vòng lặp
+            if st.session_state.pseudo_images:
+                st.subheader("📸 Ảnh nhãn giả từ các vòng lặp")
+                for fig, title in st.session_state.pseudo_images:
+                    st.write(f"**{title}**")
+                    st.pyplot(fig)
+
+            # Hiển thị lại ảnh tập test
+            if st.session_state.test_images:
+                st.subheader("📸 Ví dụ 10 ảnh dự đoán trên tập Test")
+                st.pyplot(st.session_state.test_images)
+
         else:
             st.error(f"❌ Lỗi khi huấn luyện mô hình: {st.session_state.training_results['error_message']}")
 

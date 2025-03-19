@@ -273,7 +273,15 @@ def train():
     activation = st.selectbox("Hàm kích hoạt:", ["relu", "sigmoid", "tanh"], key="train_activation")
     optimizer = st.selectbox("Optimizer:", ["adam", "sgd", "rmsprop"], key="train_optimizer")
     epochs = st.slider("🕰 Số epochs:", min_value=1, max_value=50, value=20, step=1, key="train_epochs")
-    learning_rate = st.slider("⚡ Tốc độ học (Learning Rate):", min_value=1e-5, max_value=1e-1, value=1e-3, step=1e-5, format="%.5f", key="train_learning_rate")
+    learning_rate = st.number_input(
+        "⚡ Tốc độ học (Learning Rate):", 
+        min_value=1e-5, 
+        max_value=1e-1, 
+        value=1e-3, 
+        step=1e-5, 
+        format="%.5f", 
+        key="train_learning_rate"
+    )
     loss_fn = "sparse_categorical_crossentropy"  # Hàm mất mát cố định
 
     run_name = st.text_input("🔹 Nhập tên Run:", "", key="train_run_name")

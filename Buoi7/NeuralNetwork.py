@@ -526,34 +526,42 @@ def show_experiment_selector():
         st.write(f"**Trạng thái:** {'🟢 Active' if selected_experiment.lifecycle_stage == 'active' else '🔴 Deleted'}")
         st.write(f"**Artifact Location:** `{selected_experiment.artifact_location}`")
 
-        # Kiểm tra xem có mô hình nào trong st.session_state["models"] không
-        if "models" not in st.session_state or not st.session_state["models"]:
-            st.warning("⚠ Không có mô hình nào đã huấn luyện trong session này!", icon="🚨")
+        # Lấy tất cả các run từ MLflow
+        runs = mlflow.search_runs(experiment_ids=[selected_experiment.experiment_id])
+        if runs.empty:
+            st.warning("⚠ Không có runs nào trong experiment này!", icon="🚨")
             return
 
-        st.subheader("🏃‍♂️ Danh sách Runs (Mô hình đã huấn luyện)")
+        st.subheader("🏃‍♂️ Danh sách Runs (Mô hình đã lưu trong MLflow)")
         run_info = []
-        
-        # Lấy danh sách các mô hình từ st.session_state["models"]
-        for model_data in st.session_state["models"]:
-            run_name = model_data["run_name"]  # Tên run từ train()
-            run_info.append((run_name, None))  # Không cần run_id lúc này, chỉ cần run_name
 
-        run_name_to_id = {name: None for name, _ in run_info}  # Tạm thời không cần run_id
-        run_names = list(run_name_to_id.keys())
-
-        # Chọn run từ danh sách
-        selected_run_name = st.selectbox("🔍 Chọn Run:", run_names, key="run_selector")
-
-        # Tìm thông tin chi tiết của run từ MLflow dựa trên run_name
-        runs = mlflow.search_runs(experiment_ids=[selected_experiment.experiment_id])
-        selected_run = None
+        # Lọc các run có mô hình (kiểm tra artifact 'neural_network')
         for _, run in runs.iterrows():
             run_id = run["run_id"]
             run_data = mlflow.get_run(run_id)
-            if run_data.info.run_name == selected_run_name:
-                selected_run = run_data
-                break
+            run_name = run_data.info.run_name if run_data.info.run_name else f"Run_{run_id[:8]}"
+            
+            # Kiểm tra xem run có chứa mô hình không
+            client = mlflow.tracking.MlflowClient()
+            artifacts = client.list_artifacts(run_id)
+            has_model = any(artifact.path.startswith("neural_network") for artifact in artifacts)
+            
+            if has_model:
+                run_info.append((run_name, run_id))
+
+        if not run_info:
+            st.warning("⚠ Không tìm thấy mô hình nào trong các run của experiment này!", icon="🚨")
+            return
+
+        # Tạo danh sách run_name để chọn
+        run_name_to_id = dict(run_info)
+        run_names = list(run_name_to_id.keys())
+        st.write("Danh sách run_name từ MLflow:", run_names)  # Debug
+
+        # Chọn run từ danh sách
+        selected_run_name = st.selectbox("🔍 Chọn Run:", run_names, key="run_selector")
+        selected_run_id = run_name_to_id[selected_run_name]
+        selected_run = mlflow.get_run(selected_run_id)
 
         if selected_run:
             st.markdown(f"<h3 style='color: #28B463;'>📌 Chi tiết Run: {selected_run_name}</h3>", unsafe_allow_html=True)
@@ -562,7 +570,7 @@ def show_experiment_selector():
             with col1:
                 st.write("#### ℹ️ Thông tin cơ bản")
                 st.info(f"**Run Name:** {selected_run_name}")
-                st.info(f"**Run ID:** `{selected_run.info.run_id}`")
+                st.info(f"**Run ID:** `{selected_run_id}`")
                 st.info(f"**Trạng thái:** {selected_run.info.status}")
                 start_time_ms = selected_run.info.start_time
                 start_time = datetime.fromtimestamp(start_time_ms / 1000).strftime("%Y-%m-%d %H:%M:%S") if start_time_ms else "Không có thông tin"
@@ -571,18 +579,7 @@ def show_experiment_selector():
             with col2:
                 params = selected_run.data.params
                 if params:
-                    st.write("#### ⚙️ Parameters")
-                    with st.container(height=200):
-                        st.json(params)
-
-                metrics = selected_run.data.metrics
-                if metrics:
-                    st.write("#### 📊 Metrics")
-                    with st.container(height=200):
-                        st.json(metrics)
-        else:
-            st.warning(f"⚠ Không tìm thấy thông tin chi tiết của run '{selected_run_name}' trong MLflow!")
-
+                    st
     except Exception as e:
         st.error(f"❌ Lỗi khi truy cập MLflow: {str(e)}")
         traceback.print_exc()

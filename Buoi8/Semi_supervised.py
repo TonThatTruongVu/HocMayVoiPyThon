@@ -245,6 +245,17 @@ import tensorflow as tf
 from mlflow.models.signature import infer_signature
 import os  # Thêm import này để kiểm tra thư mục
 
+import streamlit as st
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Input
+from tensorflow.keras.optimizers import Adam, SGD, RMSprop
+import mlflow
+import mlflow.keras
+from mlflow.models.signature import infer_signature
+import matplotlib.pyplot as plt
+
 def train():
     st.header("⚙️ Huấn luyện Neural Network với Pseudo Labelling")
     if "X_labeled" not in st.session_state:
@@ -422,16 +433,11 @@ def train():
                 mlflow.log_metric("final_test_accuracy", test_accuracy)
                 mlflow.log_metric("final_test_loss", test_loss)
 
-                # Kiểm tra quyền truy cập thư mục tạm
-                temp_dir = os.path.join(os.environ.get("TEMP", "C:\\Users\\HP\\AppData\\Local\\Temp"), "mlflow_temp")
-                if not os.path.exists(temp_dir):
-                    os.makedirs(temp_dir)  # Tạo thư mục tạm nếu chưa có
-
-                # Log mô hình với input_example và signature
+                # Ghi thẳng vào MLflow với signature, không cần input_example
                 input_example = X_test[:1]  # NumPy array
-                output_example = model.predict(input_example)  # Dự đoán để lấy output
-                signature = infer_signature(input_example, output_example)  # Suy ra chữ ký
-                mlflow.keras.log_model(model, "neural_network", input_example=input_example, signature=signature)
+                output_example = model.predict(input_example)
+                signature = infer_signature(input_example, output_example)
+                mlflow.keras.log_model(model, "Neural_Network_Pseudo_Labelling", signature=signature)
 
                 st.session_state.training_results = {
                     "final_val_accuracy": val_accuracy,
@@ -444,7 +450,7 @@ def train():
                 # Lưu mô hình vào danh sách models
                 if "models" not in st.session_state:
                     st.session_state["models"] = []
-                model_name = "neural_network"
+                model_name = "Neural_Network_Pseudo_Labelling"
                 full_run_name = f"Train_{st.session_state['run_name']}"
                 existing_model = next((item for item in st.session_state["models"] if item["name"] == model_name), None)
                 if existing_model:

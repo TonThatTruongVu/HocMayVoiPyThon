@@ -587,7 +587,7 @@ def show_experiment_selector():
         st.error(f"❌ Lỗi khi truy cập MLflow: {str(e)}")
         traceback.print_exc()
 # Giao diện chính
-def Neural_Network():
+def main():
     if "mlflow_initialized" not in st.session_state:
         mlflow_input()
         st.session_state.mlflow_initialized = True
@@ -618,4 +618,4 @@ def Neural_Network():
 
 
 if __name__ == "__main__":
-    Neural_Network()
+    main()

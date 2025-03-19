@@ -253,6 +253,14 @@ import mlflow.keras
 from mlflow.models.signature import infer_signature
 import matplotlib.pyplot as plt
 
+import streamlit as st
+import numpy as np
+import tensorflow as tf
+import mlflow
+import mlflow.keras
+from mlflow.models.signature import infer_signature
+import matplotlib.pyplot as plt
+
 def train():
     st.header("⚙️ Huấn luyện Neural Network với Pseudo Labelling")
     if "X_labeled" not in st.session_state:
@@ -300,15 +308,15 @@ def train():
     run_name = st.text_input("🔹 Nhập tên Run:", "", key="train_run_name")
     st.session_state["run_name"] = run_name if run_name else "Default_NN_Pseudo_Run"
 
-    # Khởi tạo biến lưu kết quả và ảnh trong session_state
+    # Khởi tạo biến lưu kết quả và thông tin trong session_state
     if "training_results" not in st.session_state:
         st.session_state.training_results = None
     if "test_accuracy" not in st.session_state:
         st.session_state.test_accuracy = None
-    if "pseudo_images" not in st.session_state:
-        st.session_state.pseudo_images = []  # Lưu ảnh nhãn giả theo từng vòng lặp
+    if "pseudo_data" not in st.session_state:
+        st.session_state.pseudo_data = []  # Lưu thông tin: ảnh, số lượng, val_accuracy theo vòng
     if "test_images" not in st.session_state:
-        st.session_state.test_images = None  # Lưu ảnh tập test
+        st.session_state.test_images = None
 
     if st.button("Huấn luyện mô hình", key="train_button"):
         if not run_name:
@@ -339,7 +347,7 @@ def train():
 
             try:
                 vong_lap = 0
-                st.session_state.pseudo_images = []  # Reset danh sách ảnh nhãn giả
+                st.session_state.pseudo_data = []  # Reset danh sách thông tin vòng lặp
                 while vong_lap < max_iterations and len(X_unlabeled) > 0:
                     st.write(f"🔄 Vòng lặp {vong_lap + 1}")
 
@@ -383,8 +391,10 @@ def train():
                         mlflow.log_param(f"new_labeled_samples_vong_lap_{vong_lap + 1}", len(X_pseudo))
 
                         # Hiển thị thông tin
-                        st.write(f"📊 Số ảnh đã gán nhãn: {len(X_labeled)}")
-                        st.write(f"📊 Số ảnh chưa gán nhãn: {len(X_unlabeled)}")
+                        labeled_count = len(X_labeled)
+                        unlabeled_count = len(X_unlabeled)
+                        st.write(f"📊 Số ảnh đã gán nhãn: {labeled_count}")
+                        st.write(f"📊 Số ảnh chưa gán nhãn: {unlabeled_count}")
 
                         # Hiển thị và lưu 10 ảnh ví dụ từ X_pseudo
                         st.subheader(f"Ví dụ 10 ảnh vừa được gán nhãn giả (Vòng {vong_lap + 1}):")
@@ -398,7 +408,15 @@ def train():
                             axes[row, col].axis('off')
                         plt.tight_layout()
                         st.pyplot(fig)
-                        st.session_state.pseudo_images.append((fig, f"Vòng {vong_lap + 1}"))
+
+                        # Lưu thông tin vòng lặp vào session_state
+                        st.session_state.pseudo_data.append({
+                            "vong_lap": vong_lap + 1,
+                            "fig": fig,
+                            "labeled_count": labeled_count,
+                            "unlabeled_count": unlabeled_count,
+                            "val_accuracy": val_accuracy
+                        })
 
                     else:
                         st.write("⚠ Không có mẫu nào vượt ngưỡng, dừng lại.")
@@ -483,7 +501,7 @@ def train():
                     "status": "failed"
                 }
 
-    # Hiển thị lại kết quả và ảnh từ session_state
+    # Hiển thị lại kết quả và thông tin từ session_state
     if st.session_state.training_results:
         st.subheader("📊 Kết quả huấn luyện")
         if st.session_state.training_results["status"] == "success":
@@ -491,12 +509,15 @@ def train():
             st.write(f"✅ Độ chính xác Test cuối cùng: {st.session_state.test_accuracy:.4f}")
             st.success(f"✅ Đã log dữ liệu cho **{st.session_state.training_results['run_name']}**!")
 
-            # Hiển thị lại ảnh nhãn giả của từng vòng lặp
-            if st.session_state.pseudo_images:
-                st.subheader("📸 Ảnh nhãn giả từ các vòng lặp")
-                for fig, title in st.session_state.pseudo_images:
-                    st.write(f"**{title}**")
-                    st.pyplot(fig)
+            # Hiển thị lại thông tin và ảnh nhãn giả của từng vòng lặp
+            if st.session_state.pseudo_data:
+                st.subheader("📸 Thông tin và ảnh nhãn giả từ các vòng lặp")
+                for data in st.session_state.pseudo_data:
+                    st.write(f"**Vòng lặp {data['vong_lap']}**")
+                    st.write(f"📌 Độ chính xác Validation: {data['val_accuracy']:.4f}")
+                    st.write(f"📊 Số ảnh đã gán nhãn: {data['labeled_count']}")
+                    st.write(f"📊 Số ảnh chưa gán nhãn: {data['unlabeled_count']}")
+                    st.pyplot(data['fig'])
 
             # Hiển thị lại ảnh tập test
             if st.session_state.test_images:

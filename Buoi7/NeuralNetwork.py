@@ -536,13 +536,13 @@ def show_experiment_selector():
         run_info = []
 
         # Lọc các run có mô hình (kiểm tra artifact 'neural_network')
+        client = mlflow.tracking.MlflowClient()
         for _, run in runs.iterrows():
             run_id = run["run_id"]
             run_data = mlflow.get_run(run_id)
             run_name = run_data.info.run_name if run_data.info.run_name else f"Run_{run_id[:8]}"
             
             # Kiểm tra xem run có chứa mô hình không
-            client = mlflow.tracking.MlflowClient()
             artifacts = client.list_artifacts(run_id)
             has_model = any(artifact.path.startswith("neural_network") for artifact in artifacts)
             
@@ -577,9 +577,31 @@ def show_experiment_selector():
                 st.info(f"**Thời gian chạy:** {start_time}")
 
             with col2:
+                # Hiển thị Parameters (11)
                 params = selected_run.data.params
                 if params:
-                    st
+                    st.write("#### ⚙️ Parameters")
+                    st.write("- **Total Samples**: ", params.get("total_samples", "N/A"))
+                    st.write("- **Test Size**: ", params.get("test_size", "N/A"))
+                    st.write("- **Validation Size**: ", params.get("validation_size", "N/A"))
+                    st.write("- **Train Size**: ", params.get("train_size", "N/A"))
+                    st.write("- **K-Folds**: ", params.get("k_folds", "N/A"))
+                    st.write("- **Number of Layers**: ", params.get("num_layers", "N/A"))
+                    st.write("- **Neurons per Layer**: ", params.get("num_neurons", "N/A"))
+                    st.write("- **Activation Function**: ", params.get("activation", "N/A"))
+                    st.write("- **Optimizer**: ", params.get("optimizer", "N/A"))
+                    st.write("- **Epochs**: ", params.get("epochs", "N/A"))
+                    st.write("- **Learning Rate**: ", params.get("learning_rate", "N/A"))
+
+                # Hiển thị Metrics (4)
+                metrics = selected_run.data.metrics
+                if metrics:
+                    st.write("#### 📊 Metrics")
+                    st.write("- **CV Accuracy Mean**: ", f"{metrics.get('cv_accuracy_mean', 'N/A'):.4f}")
+                    st.write("- **CV Loss Mean**: ", f"{metrics.get('cv_loss_mean', 'N/A'):.4f}")
+                    st.write("- **Test Accuracy**: ", f"{metrics.get('test_accuracy', 'N/A'):.4f}")
+                    st.write("- **Test Loss**: ", f"{metrics.get('test_loss', 'N/A'):.4f}")
+
     except Exception as e:
         st.error(f"❌ Lỗi khi truy cập MLflow: {str(e)}")
         traceback.print_exc()

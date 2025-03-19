@@ -13,3 +13,4 @@ langchain-openai
 dagshub
 plotly
 kaleido
+tensorflow

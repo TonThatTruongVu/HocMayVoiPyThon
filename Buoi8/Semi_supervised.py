@@ -512,46 +512,46 @@ def train():
                 }
 
     # Hiển thị lại kết quả và thông tin từ session_state
-    if st.session_state.training_results:
-        st.subheader("📊 Kết quả huấn luyện")
-        if st.session_state.training_results["status"] == "success":
-            st.write(f"✅ Độ chính xác Validation cuối cùng: {st.session_state.training_results['final_val_accuracy']:.4f}")
-            st.write(f"✅ Độ chính xác Test cuối cùng: {st.session_state.test_accuracy:.4f}")
-            st.success(f"✅ Đã log dữ liệu cho **{st.session_state.training_results['run_name']}**!")
+    # if st.session_state.training_results:
+    #     st.subheader("📊 Kết quả huấn luyện")
+    #     if st.session_state.training_results["status"] == "success":
+    #         st.write(f"✅ Độ chính xác Validation cuối cùng: {st.session_state.training_results['final_val_accuracy']:.4f}")
+    #         st.write(f"✅ Độ chính xác Test cuối cùng: {st.session_state.test_accuracy:.4f}")
+    #         st.success(f"✅ Đã log dữ liệu cho **{st.session_state.training_results['run_name']}**!")
 
-            # Hiển thị lại thông tin và 5 ảnh ví dụ của từng vòng lặp
-            if st.session_state.pseudo_data:
-                st.subheader("📸 Thông tin và ảnh nhãn giả từ các vòng lặp")
-                for data in st.session_state.pseudo_data:
-                    st.write(f"**Vòng lặp {data['vong_lap']}**")
-                    st.write(f"📌 Độ chính xác Validation: {data['val_accuracy']:.4f}")
-                    st.write(f"📊 Số ảnh đã gán nhãn: {data['labeled_count']}")
-                    st.write(f"📊 Số ảnh chưa gán nhãn: {data['unlabeled_count']}")
-                    st.write(f"📊 Số nhãn giả đúng: {data['correct_labels']}")
-                    st.write(f"📊 Số nhãn giả sai: {data['incorrect_labels']}")
-                    st.write(f"📈 Độ chính xác của nhãn giả: {data['accuracy_pseudo']:.4f}")
+    #         # Hiển thị lại thông tin và 5 ảnh ví dụ của từng vòng lặp
+    #         if st.session_state.pseudo_data:
+    #             st.subheader("📸 Thông tin và ảnh nhãn giả từ các vòng lặp")
+    #             for data in st.session_state.pseudo_data:
+    #                 st.write(f"**Vòng lặp {data['vong_lap']}**")
+    #                 st.write(f"📌 Độ chính xác Validation: {data['val_accuracy']:.4f}")
+    #                 st.write(f"📊 Số ảnh đã gán nhãn: {data['labeled_count']}")
+    #                 st.write(f"📊 Số ảnh chưa gán nhãn: {data['unlabeled_count']}")
+    #                 st.write(f"📊 Số nhãn giả đúng: {data['correct_labels']}")
+    #                 st.write(f"📊 Số nhãn giả sai: {data['incorrect_labels']}")
+    #                 st.write(f"📈 Độ chính xác của nhãn giả: {data['accuracy_pseudo']:.4f}")
 
-                    # Hiển thị lại 5 ảnh ví dụ
-                    X_pseudo = data['X_pseudo']
-                    y_pseudo = data['y_pseudo']
-                    y_true = data['y_true']
-                    num_examples = min(5, len(X_pseudo))
-                    fig, axes = plt.subplots(1, 5, figsize=(15, 3))
-                    example_indices = np.random.choice(len(X_pseudo), num_examples, replace=False)
-                    for i, idx in enumerate(example_indices):
-                        axes[i].imshow(X_pseudo[idx].reshape(28, 28), cmap='gray')
-                        axes[i].set_title(f"Thực: {y_true[idx]}\nGiả: {y_pseudo[idx]}")
-                        axes[i].axis('off')
-                    plt.tight_layout()
-                    st.pyplot(fig)
+    #                 # Hiển thị lại 5 ảnh ví dụ
+    #                 X_pseudo = data['X_pseudo']
+    #                 y_pseudo = data['y_pseudo']
+    #                 y_true = data['y_true']
+    #                 num_examples = min(5, len(X_pseudo))
+    #                 fig, axes = plt.subplots(1, 5, figsize=(15, 3))
+    #                 example_indices = np.random.choice(len(X_pseudo), num_examples, replace=False)
+    #                 for i, idx in enumerate(example_indices):
+    #                     axes[i].imshow(X_pseudo[idx].reshape(28, 28), cmap='gray')
+    #                     axes[i].set_title(f"Thực: {y_true[idx]}\nGiả: {y_pseudo[idx]}")
+    #                     axes[i].axis('off')
+    #                 plt.tight_layout()
+    #                 st.pyplot(fig)
 
-            # Hiển thị lại ảnh tập test
-            if st.session_state.test_images:
-                st.subheader("📸 Ví dụ 10 ảnh dự đoán trên tập Test")
-                st.pyplot(st.session_state.test_images)
+    #         # Hiển thị lại ảnh tập test
+    #         if st.session_state.test_images:
+    #             st.subheader("📸 Ví dụ 10 ảnh dự đoán trên tập Test")
+    #             st.pyplot(st.session_state.test_images)
 
-        else:
-            st.error(f"❌ Lỗi khi huấn luyện mô hình: {st.session_state.training_results['error_message']}")
+    #     else:
+    #         st.error(f"❌ Lỗi khi huấn luyện mô hình: {st.session_state.training_results['error_message']}")
 
     # Hiển thị danh sách mô hình đã lưu
     if "models" in st.session_state and st.session_state["models"]:
@@ -559,85 +559,78 @@ def train():
         st.write("📋 Danh sách các mô hình đã lưu:")
         model_display = [f"{model['run_name']} ({model['name']})" for model in st.session_state["models"]]
         st.write(", ".join(model_display))
-def predict():
-    st.header("🔍 Dự đoán với Neural Network")
+def du_doan():
+    st.header("✍️ Dự đoán số viết tay")
+    
+    # Kiểm tra xem có mô hình nào trong st.session_state["models"] không
     if "models" not in st.session_state or not st.session_state["models"]:
-        st.error("⚠️ Chưa có mô hình nào được huấn luyện! Hãy huấn luyện mô hình trước trong tab 'Huấn luyện'.")
+        st.error("⚠️ Chưa có mô hình nào được huấn luyện. Vui lòng huấn luyện mô hình trước!")
         return
 
-    # Chọn mô hình từ danh sách đã huấn luyện
-    model_options = [f"{model['run_name']} ({model['name']})" for model in st.session_state["models"]]
-    selected_model_name = st.selectbox("Chọn mô hình để dự đoán:", model_options, key="predict_model_select")
-    selected_model = next(model for model in st.session_state["models"] if f"{model['run_name']} ({model['name']})" == selected_model_name)
-    model = selected_model["model"]
+    # Lấy danh sách các mô hình đã huấn luyện
+    model_options = [f"{m['run_name']} ({m['name']})" for m in st.session_state["models"]]
+    selected_model_name = st.selectbox("📋 Chọn mô hình để dự đoán:", model_options, key="predict_model_select")
+    
+    # Lấy mô hình được chọn từ danh sách
+    selected_model = next(m["model"] for m in st.session_state["models"] if f"{m['run_name']} ({m['name']})" == selected_model_name)
+    st.success(f"✅ Đã chọn mô hình: {selected_model_name}")
 
-    # Chọn phương thức dự đoán (xóa "Dự đoán trên tập Test")
-    prediction_mode = st.radio(
-        "Chọn phương thức dự đoán:",
-        ["Vẽ tay", "Tải ảnh lên"],
-        key="predict_mode"
-    )
+    input_method = st.radio("📥 Chọn phương thức nhập liệu:", ("Vẽ tay", "Tải ảnh lên"), key="predict_input_method")
 
-    if prediction_mode == "Vẽ tay":
-        st.write("Vẽ số từ 0-9 trên canvas bên dưới (kích thước 28x28):")
-        
-        # Thêm container cho canvas và nút reload
-        canvas_container = st.container()
-        with canvas_container:
-            canvas_result = st_canvas(
-                fill_color="black",
-                stroke_width=20,
-                stroke_color="white",
-                background_color="black",
-                height=280,
-                width=280,
-                drawing_mode="freedraw",
-                key="canvas"
-            )
-        
-        # Thêm nút tải lại canvas
-        if st.button("Tải lại Canvas", key="reload_canvas_button"):
-            st.session_state.pop("canvas", None)  # Xóa trạng thái canvas
-            st.rerun()  # Chạy lại ứng dụng để làm mới canvas
+    img = None
+    if input_method == "Vẽ tay":
+        if "key_value" not in st.session_state:
+            st.session_state.key_value = str(random.randint(0, 1000000))
 
-        if st.button("Dự đoán số vẽ tay", key="predict_draw_button"):
+        if st.button("🔄 Tải lại nếu không thấy canvas", key="predict_reload_canvas"):
+            st.session_state.key_value = str(random.randint(0, 1000000))
+
+        canvas_result = st_canvas(
+            fill_color="black",
+            stroke_width=10,
+            stroke_color="white",
+            background_color="black",
+            height=150,
+            width=150,
+            drawing_mode="freedraw",
+            key=st.session_state.key_value,
+            update_streamlit=True
+        )
+        if st.button("Dự đoán số từ bản vẽ", key="predict_from_drawing"):
             if canvas_result.image_data is not None:
-                # Chuyển ảnh vẽ tay thành định dạng phù hợp (28x28, grayscale)
-                img = Image.fromarray(canvas_result.image_data.astype('uint8'), 'RGBA').convert('L')
-                img = img.resize((28, 28), Image.Resampling.LANCZOS)
-                img_array = np.array(img) / 255.0  # Chuẩn hóa về [0, 1]
-                img_array = img_array.reshape(1, 28 * 28)  # Reshape thành (1, 784)
-
-                # Dự đoán
-                prediction = model.predict(img_array, verbose=0)
-                predicted_label = np.argmax(prediction)
-                confidence = np.max(prediction)
-
-                st.write(f"✅ Dự đoán: **{predicted_label}** (Độ tin cậy: {confidence:.4f})")
-                st.image(img, caption="Ảnh vẽ tay đã xử lý (28x28)", width=100)
+                img = Image.fromarray(canvas_result.image_data[:, :, 0].astype(np.uint8))
+                img = img.resize((28, 28)).convert("L")
+                img = np.array(img, dtype=np.float32) / 255.0
+                img = img.reshape(1, -1)
             else:
-                st.warning("⚠️ Vui lòng vẽ một số trước khi dự đoán!")
+                st.error("⚠️ Hãy vẽ một số trước khi bấm Dự đoán!")
 
-    elif prediction_mode == "Tải ảnh lên":
-        uploaded_file = st.file_uploader("Tải lên ảnh số (28x28, grayscale):", type=["png", "jpg", "jpeg"])
+    else:
+        uploaded_file = st.file_uploader("📤 Tải ảnh lên (định dạng PNG/JPG)", type=["png", "jpg", "jpeg"], key="predict_file_uploader")
         if uploaded_file is not None:
-            # Xử lý ảnh tải lên
-            img = Image.open(uploaded_file).convert('L')  # Chuyển thành grayscale
-            img = img.resize((28, 28), Image.Resampling.LANCZOS)
-            img_array = np.array(img) / 255.0  # Chuẩn hóa về [0, 1]
-            img_array = img_array.reshape(1, 28 * 28)  # Reshape thành (1, 784)
+            st.image(uploaded_file, caption="Ảnh đã tải lên", width=150)
+            if st.button("Dự đoán số từ ảnh", key="predict_from_upload"):
+                img = Image.open(uploaded_file).convert("L")
+                img = img.resize((28, 28))
+                img = np.array(img, dtype=np.float32) / 255.0
+                img = img.reshape(1, -1)
 
-            if st.button("Dự đoán ảnh tải lên", key="predict_upload_button"):
-                # Dự đoán
-                prediction = model.predict(img_array, verbose=0)
-                predicted_label = np.argmax(prediction)
-                confidence = np.max(prediction)
+    if img is not None:
+        st.image(Image.fromarray((img.reshape(28, 28) * 255).astype(np.uint8)), caption="Ảnh sau xử lý", width=100)
+        
+        # Dự đoán với mô hình Keras
+        probabilities = selected_model.predict(img)  # Keras trả về xác suất cho tất cả các lớp
+        prediction = np.argmax(probabilities, axis=1)  # Lấy lớp có xác suất cao nhất
+        st.subheader(f"🔢 Dự đoán: {prediction[0]}")
 
-                st.write(f"✅ Dự đoán: **{predicted_label}** (Độ tin cậy: {confidence:.4f})")
-                st.image(img, caption="Ảnh tải lên đã xử lý (28x28)", width=100)
+        # Tính độ tin cậy (xác suất của lớp được dự đoán)
+        predicted_class_confidence = probabilities[0][prediction[0]]
+        st.write(f"📈 **Độ tin cậy:** {predicted_class_confidence:.4f} ({predicted_class_confidence * 100:.2f}%)")
 
-    # Gọi show_experiment_selector() sau khi dự đoán
-    if st.session_state.get("training_results") or st.session_state.get("models"):
+        # Hiển thị xác suất cho từng lớp
+        st.write("**Xác suất cho từng lớp (0-9):**")
+        confidence_df = pd.DataFrame({"Nhãn": range(10), "Xác suất": probabilities[0]})
+        st.bar_chart(confidence_df.set_index("Nhãn"))
         show_experiment_selector()
 from datetime import datetime
 
@@ -744,7 +737,7 @@ def main():
     with tabs[3]:
         train()
     with tabs[4]:
-        predict()
+        du_doan()
 
 if __name__ == "__main__":
     main()

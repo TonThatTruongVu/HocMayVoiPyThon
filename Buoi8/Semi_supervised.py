@@ -248,21 +248,9 @@ import os  # Thêm import này để kiểm tra thư mục
 
 
 
-import mlflow
-import mlflow.keras
-from mlflow.models.signature import infer_signature
-import matplotlib.pyplot as plt
 
-import streamlit as st
-import numpy as np
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Input
-from tensorflow.keras.optimizers import Adam, SGD, RMSprop
-import mlflow
-import mlflow.keras
-from mlflow.models.signature import infer_signature
-import matplotlib.pyplot as plt
+
+
 
 def train():
     st.header("⚙️ Huấn luyện Neural Network với Pseudo Labelling")
@@ -384,14 +372,28 @@ def train():
                     high_confidence_mask = confidence_scores >= threshold
                     X_pseudo = X_unlabeled[high_confidence_mask]
                     y_pseudo = pseudo_labels[high_confidence_mask]
+                    y_true = y_unlabeled[high_confidence_mask]  # Nhãn thực tế của các mẫu được gán
 
                     if len(X_pseudo) > 0:
                         st.write(f"✅ Gán nhãn giả cho {len(X_pseudo)} mẫu với độ tin cậy >= {threshold}")
+
+                        # So sánh nhãn giả với nhãn thực tế
+                        correct_labels = np.sum(y_pseudo == y_true)
+                        incorrect_labels = len(y_pseudo) - correct_labels
+                        st.write(f"📊 Số nhãn giả đúng: {correct_labels}")
+                        st.write(f"📊 Số nhãn giả sai: {incorrect_labels}")
+                        accuracy_pseudo = correct_labels / len(y_pseudo) if len(y_pseudo) > 0 else 0
+                        st.write(f"📈 Độ chính xác của nhãn giả: {accuracy_pseudo:.4f}")
+
+                        # Cập nhật tập labeled và unlabeled
                         X_labeled = np.vstack((X_labeled, X_pseudo))
                         y_labeled = np.hstack((y_labeled, y_pseudo))
                         X_unlabeled = X_unlabeled[~high_confidence_mask]
                         y_unlabeled = y_unlabeled[~high_confidence_mask]
                         mlflow.log_param(f"new_labeled_samples_vong_lap_{vong_lap + 1}", len(X_pseudo))
+                        mlflow.log_metric(f"correct_pseudo_labels_vong_lap_{vong_lap + 1}", correct_labels)
+                        mlflow.log_metric(f"incorrect_pseudo_labels_vong_lap_{vong_lap + 1}", incorrect_labels)
+                        mlflow.log_metric(f"pseudo_label_accuracy_vong_lap_{vong_lap + 1}", accuracy_pseudo)
 
                         # Lưu thông tin số lượng
                         labeled_count = len(X_labeled)
@@ -407,19 +409,23 @@ def train():
                         for i, idx in enumerate(example_indices):
                             row, col = divmod(i, 5)
                             axes[row, col].imshow(X_pseudo[idx].reshape(28, 28), cmap='gray')
-                            axes[row, col].set_title(f"Nhãn giả: {y_pseudo[idx]}")
+                            axes[row, col].set_title(f"Thực: {y_true[idx]}\nGiả: {y_pseudo[idx]}")
                             axes[row, col].axis('off')
                         plt.tight_layout()
                         st.pyplot(fig)
 
-                        # Lưu thông tin vòng lặp (bao gồm dữ liệu để hiển thị lại 5 ảnh sau)
+                        # Lưu thông tin vòng lặp
                         st.session_state.pseudo_data.append({
                             "vong_lap": vong_lap + 1,
-                            "X_pseudo": X_pseudo,  # Lưu dữ liệu ảnh để tái tạo
-                            "y_pseudo": y_pseudo,  # Lưu nhãn giả để tái tạo
+                            "X_pseudo": X_pseudo,
+                            "y_pseudo": y_pseudo,
+                            "y_true": y_true,  # Lưu nhãn thực tế
                             "labeled_count": labeled_count,
                             "unlabeled_count": unlabeled_count,
-                            "val_accuracy": val_accuracy
+                            "val_accuracy": val_accuracy,
+                            "correct_labels": correct_labels,
+                            "incorrect_labels": incorrect_labels,
+                            "accuracy_pseudo": accuracy_pseudo
                         })
 
                     else:
@@ -521,16 +527,20 @@ def train():
                     st.write(f"📌 Độ chính xác Validation: {data['val_accuracy']:.4f}")
                     st.write(f"📊 Số ảnh đã gán nhãn: {data['labeled_count']}")
                     st.write(f"📊 Số ảnh chưa gán nhãn: {data['unlabeled_count']}")
+                    st.write(f"📊 Số nhãn giả đúng: {data['correct_labels']}")
+                    st.write(f"📊 Số nhãn giả sai: {data['incorrect_labels']}")
+                    st.write(f"📈 Độ chính xác của nhãn giả: {data['accuracy_pseudo']:.4f}")
 
                     # Hiển thị lại 5 ảnh ví dụ
                     X_pseudo = data['X_pseudo']
                     y_pseudo = data['y_pseudo']
-                    num_examples = min(5, len(X_pseudo))  # Chỉ lấy 5 ảnh
-                    fig, axes = plt.subplots(1, 5, figsize=(15, 3))  # 1 hàng, 5 cột
+                    y_true = data['y_true']
+                    num_examples = min(5, len(X_pseudo))
+                    fig, axes = plt.subplots(1, 5, figsize=(15, 3))
                     example_indices = np.random.choice(len(X_pseudo), num_examples, replace=False)
                     for i, idx in enumerate(example_indices):
                         axes[i].imshow(X_pseudo[idx].reshape(28, 28), cmap='gray')
-                        axes[i].set_title(f"Nhãn giả: {y_pseudo[idx]}")
+                        axes[i].set_title(f"Thực: {y_true[idx]}\nGiả: {y_pseudo[idx]}")
                         axes[i].axis('off')
                     plt.tight_layout()
                     st.pyplot(fig)

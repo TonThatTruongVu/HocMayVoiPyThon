@@ -580,16 +580,25 @@ def predict():
 
     if prediction_mode == "Vẽ tay":
         st.write("Vẽ số từ 0-9 trên canvas bên dưới (kích thước 28x28):")
-        canvas_result = st_canvas(
-            fill_color="black",
-            stroke_width=20,
-            stroke_color="white",
-            background_color="black",
-            height=280,
-            width=280,
-            drawing_mode="freedraw",
-            key="canvas"
-        )
+        
+        # Thêm container cho canvas và nút reload
+        canvas_container = st.container()
+        with canvas_container:
+            canvas_result = st_canvas(
+                fill_color="black",
+                stroke_width=20,
+                stroke_color="white",
+                background_color="black",
+                height=280,
+                width=280,
+                drawing_mode="freedraw",
+                key="canvas"
+            )
+        
+        # Thêm nút tải lại canvas
+        if st.button("Tải lại Canvas", key="reload_canvas_button"):
+            st.session_state.pop("canvas", None)  # Xóa trạng thái canvas
+            st.rerun()  # Chạy lại ứng dụng để làm mới canvas
 
         if st.button("Dự đoán số vẽ tay", key="predict_draw_button"):
             if canvas_result.image_data is not None:
